@@ -1,12 +1,11 @@
 "use client";
-import axios from "axios";
-import Image from "next/image";
+
 import { enqueueSnackbar } from "notistack";
 
 export default function Home() {
   const handleApi = () => {
     const userId = window.Telegram.WebApp.initDataUnsafe.user?.id;
-      enqueueSnackbar(userId);
+      enqueueSnackbar(userId)
     
   };
 
