@@ -5,10 +5,9 @@ import { enqueueSnackbar } from "notistack";
 
 export default function Home() {
   const handleApi = () => {
-    axios.get("/api/test").then((res) => {
-      console.log({ res });
-      enqueueSnackbar(res.data)
-    });
+    const userId = window.Telegram.WebApp.initDataUnsafe.user?.id;
+      enqueueSnackbar(userId);
+    
   };
 
   return (
