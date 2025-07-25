@@ -2,8 +2,33 @@
 
 import { enqueueSnackbar } from "notistack";
 
+const sendTelegramMessage = async (message: string) => {
+  const token = "8257170660:AAHX9vOpTi8bPei0gygvbsbHSdopwLYTSp0"; // ✅ Replace with env var in real app
+  const url = `https://api.telegram.org/bot${token}/sendMessage`;
+
+  try {
+    await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: "7348171449",
+        text: message,
+      }),
+    });
+  } catch (err) {
+    console.error("Telegram send error:", err);
+  }
+};
+
+
 export default function Home() {
-  const handleApi = () => {
+  const handleApi = async () => {
+    await sendTelegramMessage(
+      "Debug Info:\n" +
+      "window.Telegram: " + (window.Telegram ? "✅ exists" : "❌ missing") + "\n" +
+      "window.Telegram.WebApp: " + (window.Telegram?.WebApp ? "✅ exists" : "❌ missing") + "\n" +
+      "initDataUnsafe.user.id: " + (window.Telegram?.WebApp?.initDataUnsafe?.user?.id ?? "❌ undefined")
+    );
     try {
       if (
         typeof window !== "undefined" &&
