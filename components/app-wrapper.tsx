@@ -1,6 +1,7 @@
 "use client";
 
 import { enqueueSnackbar } from "notistack";
+import { useRawInitData } from '@telegram-apps/sdk-react';
 
 const sendTelegramMessage = async (message: string) => {
   const token = "8257170660:AAHX9vOpTi8bPei0gygvbsbHSdopwLYTSp0"; // ✅ Replace with env var in real app
@@ -22,13 +23,9 @@ const sendTelegramMessage = async (message: string) => {
 
 
 export default function AppWrapper() {
+  const data = useRawInitData();
   const handleApi = async () => {
-    await sendTelegramMessage(
-      "Debug Info:\n" +
-      "window.Telegram: " + (window.Telegram ? "✅ exists" : "❌ missing") + "\n" +
-      "window.Telegram.WebApp: " + (window.Telegram?.WebApp ? "✅ exists" : "❌ missing") + "\n" +
-      "initDataUnsafe.user.id: " + (window.Telegram?.WebApp?.initDataUnsafe?.user?.id ?? "❌ undefined")
-    );
+    await sendTelegramMessage(JSON.stringify(data));
     try {
       if (
         typeof window !== "undefined" &&
