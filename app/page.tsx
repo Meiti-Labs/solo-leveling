@@ -4,9 +4,23 @@ import { enqueueSnackbar } from "notistack";
 
 export default function Home() {
   const handleApi = () => {
-    const userId = window.Telegram.WebApp.initDataUnsafe.user?.id;
-      enqueueSnackbar(userId)
-    
+    try {
+      if (
+        typeof window !== "undefined" &&
+        window.Telegram &&
+        window.Telegram.WebApp &&
+        window.Telegram.WebApp.initDataUnsafe &&
+        window.Telegram.WebApp.initDataUnsafe.user
+      ) {
+        const userId = window.Telegram.WebApp.initDataUnsafe.user.id;
+        enqueueSnackbar(`User ID: ${userId}`);
+      } else {
+        enqueueSnackbar("Telegram WebApp not available");
+      }
+    } catch (error) {
+      enqueueSnackbar("An error occurred");
+      console.error(error);
+    }
   };
 
   return (
