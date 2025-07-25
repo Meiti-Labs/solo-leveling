@@ -1,9 +1,12 @@
+"use client"
 import dynamic from "next/dynamic";
 
-export default function Home() {
-  const AppWrapper = dynamic(() => import("@/components/app-wrapper"), {
+const AppWrapper = dynamic(() => import("@/components/app-wrapper"), {
     ssr: false,
   });
+
+export default function Home() {
+  
 
   return <AppWrapper />;
 }
