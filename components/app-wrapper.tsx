@@ -1,10 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { enqueueSnackbar } from "notistack";
-import { useRawInitData } from '@telegram-apps/sdk-react';
+import { useRawInitData } from "@telegram-apps/sdk-react";
 
 const sendTelegramMessage = async (message: string) => {
-  const token = "8257170660:AAHX9vOpTi8bPei0gygvbsbHSdopwLYTSp0"; // ✅ Replace with env var in real app
+  const token = process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN!; // ✅ Use .env file in real use
   const url = `https://api.telegram.org/bot${token}/sendMessage`;
 
   try {
@@ -12,7 +13,7 @@ const sendTelegramMessage = async (message: string) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        chat_id: "7348171449",
+        chat_id: "7348171449", // 🔥 optional: get this dynamically from Telegram user
         text: message,
       }),
     });
@@ -21,27 +22,30 @@ const sendTelegramMessage = async (message: string) => {
   }
 };
 
-
 export default function AppWrapper() {
   const data = useRawInitData();
+  const [telegramReady, setTelegramReady] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      window.Telegram &&
+      window.Telegram.WebApp &&
+      window.Telegram.WebApp.initDataUnsafe?.user
+    ) {
+      setTelegramReady(true);
+      setUserId(window.Telegram.WebApp.initDataUnsafe.user.id);
+    }
+  }, []);
+
   const handleApi = async () => {
     await sendTelegramMessage(JSON.stringify(data));
-    try {
-      if (
-        typeof window !== "undefined" &&
-        window.Telegram &&
-        window.Telegram.WebApp &&
-        window.Telegram.WebApp.initDataUnsafe &&
-        window.Telegram.WebApp.initDataUnsafe.user
-      ) {
-        const userId = window.Telegram.WebApp.initDataUnsafe.user.id;
-        enqueueSnackbar(`User ID: ${userId}`);
-      } else {
-        enqueueSnackbar("Telegram WebApp not available");
-      }
-    } catch (error) {
-      enqueueSnackbar("An error occurred");
-      console.error(error);
+
+    if (telegramReady && userId) {
+      enqueueSnackbar(`User ID: ${userId}`);
+    } else {
+      enqueueSnackbar("Telegram WebApp not available");
     }
   };
 
