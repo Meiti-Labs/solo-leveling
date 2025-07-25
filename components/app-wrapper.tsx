@@ -1,7 +1,7 @@
 "use client";
 
 import { enqueueSnackbar } from "notistack";
-import { useRawInitData } from '@telegram-apps/sdk-react';
+import { useLaunchParams } from '@telegram-apps/sdk-react';
 
 const sendTelegramMessage = async (message: string) => {
   const token = "8257170660:AAHX9vOpTi8bPei0gygvbsbHSdopwLYTSp0"; // ✅ Replace with env var in real app
@@ -23,20 +23,20 @@ const sendTelegramMessage = async (message: string) => {
 
 
 export default function AppWrapper() {
-  const data = useRawInitData();
+  const data = useLaunchParams();
   const handleApi = async () => {
-    await sendTelegramMessage(data||"err");
+    await sendTelegramMessage(JSON.stringify(data));
     try {
       if (
        data
       ) {
-        const userId = window.Telegram.WebApp.initDataUnsafe.user.id;
-        enqueueSnackbar(`User ID: ${userId}`);
+        enqueueSnackbar(`User ID: ${data.tgWebAppData?.user?.id}`);
       } else {
         enqueueSnackbar("Telegram WebApp not available");
       }
     } catch (error) {
       enqueueSnackbar("An error occurred");
+      await sendTelegramMessage(JSON.stringify(error));
       console.error(error);
     }
   };
