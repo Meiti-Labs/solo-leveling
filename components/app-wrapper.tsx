@@ -3,7 +3,20 @@
 import { enqueueSnackbar } from "notistack";
 import { useLaunchParams } from "@telegram-apps/sdk-react";
 import { useEffect } from "react";
-import axios from "axios";
+import ApiService from "@/utils/ApiService";
+import { ObjectId } from "mongoose";
+
+export interface IUserData {
+  _id: ObjectId;
+  telegramId: string;
+  username: string;
+  totalXP: number;
+  level: number;
+  cash: number;
+  createdAt: Date;
+  updatedAt: Date;
+  __v: number;
+}
 
 export default function AppWrapper() {
   const data = useLaunchParams();
@@ -21,10 +34,18 @@ export default function AppWrapper() {
   };
 
   useEffect(() => {
-    if (data) {  
-      axios.post(`${window.location.origin}/api/telegram/user/verify`, { ...data.tgWebAppData }).then((res) => {
-        console.log(res);
-      });
+    if (data) {
+      ApiService.post<IUserData>(`/telegram/user/verify`, {
+        ...data.tgWebAppData,
+      })
+        .then((res) => {
+          res.messages?.forEach((i) => {
+            enqueueSnackbar(i);
+          });
+        })
+        .catch((err) => {
+          enqueueSnackbar(err);
+        });
     }
   }, [data]);
 
