@@ -1,17 +1,20 @@
 import { IApiResponse } from "@/types/types";
+import { NextResponse } from "next/server";
 
 export const ApiResponse = {
   success: ({
-    messages = ["Operation was succesfull"],
+    messages = ["Operation was successful"],
     data,
-  }: IApiResponse): IApiResponse => ({
+    status = 200
+  }: IApiResponse = {}) => NextResponse.json({
     resultCode: "Ok",
     success: true,
     messages,
     data,
-  }),
+  }, {status}) ,
   error: ({
-    messages = ["Operation Faild."],
+    messages = ["Operation failed."],
     resultCode = "Error",
-  }: IApiResponse): IApiResponse => ({ resultCode, success: false, messages }),
+    status = 400
+  }: IApiResponse = {})  => NextResponse.json({ resultCode, success: false, messages }, {status}),
 };

@@ -35,29 +35,21 @@ export async function POST(req: NextRequest) {
         secure: process.env.NODE_ENV === "development",
       });
 
-      return NextResponse.json({
-        message: `WELCOM ${payload.user.first_name}`,
-        data: user,
-      });
+      return ApiResponse.success({messages: [`WELCOME ${user.username}`], data: user });
     } else {
       const newUserEntity = new _user({
         telegramId: payload.user.id,
         username: payload.user.first_name,
       });
       const newUserData = (await newUserEntity.save()).toObject();
-      return NextResponse.json(
-        {
-          message: `WELCOM BACK ${newUserData.username}`,
-          data: newUserData,
-        },
-        { status: 200 }
-      );
+      return ApiResponse.success({messages: [`WELCOME ${newUserData.username}`], data: newUserData });
     }
   } catch (err) {
     if (process.env.NODE_ENV === "production") {
+      
       console.log({ error });
 
-      return NextResponse.json(ApiResponse.error({}), { status: 400 });
+      return ApiResponse.error();
     } else {
       return NextResponse.json(
         ApiResponse.error({ messages: [err as string] }),

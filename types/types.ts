@@ -17,4 +17,5 @@ export interface IApiResponse<T = unknown> {
     data?: T; // The actual payload
     payload?: T;
     responseData?: T; // Some APIs may use 'payload' instead
+    status?: number;
   }
