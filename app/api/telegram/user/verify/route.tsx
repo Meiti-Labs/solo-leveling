@@ -4,7 +4,6 @@ import jwt from "jsonwebtoken";
 import { connectDB } from "@/lib/db";
 import _user from "@/models/user.model";
 import { ApiResponse } from "@/utils/ServiceResponse";
-import { error } from "console";
 
 interface TelegramUser {
   first_name: string;
@@ -46,8 +45,8 @@ export async function POST(req: NextRequest) {
     }
   } catch (err) {
     if (process.env.NODE_ENV === "production") {
-      
-      console.log({ error });
+
+      console.log({ err });
 
       return ApiResponse.error();
     } else {
