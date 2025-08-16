@@ -31,7 +31,6 @@ export async function POST(req: NextRequest) {
       const userCookie = cookies();
       (await userCookie).set("token", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "development",
       });
 
       return ApiResponse.success({messages: [`WELCOME ${user.username}`], data: user });
