@@ -9,16 +9,12 @@ import { Progress } from "./ui/progress";
 import { userStore } from "@/app/store/userStore";
 import { Icon } from "@iconify/react";
 import {
-  Card,
-  CardAction,
-  CardContent,
+
   CardDescription,
-  CardFooter,
-  CardHeader,
+
   CardTitle,
 } from "./ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { ShineBorder } from "./ui/shine-border";
 import { AnimatedCircularProgressBar } from "./ui/animated-circular-progress-bar";
 import BadgeMedal from "./shared/badge-level";
 import { ChartLineInteractive } from "./charts/chart-line-interactive";
