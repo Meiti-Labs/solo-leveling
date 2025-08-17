@@ -41,6 +41,18 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --animate-shine: shine var(--duration) infinite linear;
+  @keyframes shine {
+  0% {
+    background-position: 0% 0%;
+    }
+  50% {
+    background-position: 100% 100%;
+    }
+  to {
+    background-position: 0% 0%;
+    }
+  }
 }
 
 :root {
@@ -118,5 +130,31 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  .glass {
+    @apply backdrop-blur-xs rounded-2xl bg-blue-500/10 ;
+  }
+
+  .col-centered {
+    @apply flex flex-col justify-center items-center
+  }
+  .centered {
+    @apply flex justify-center items-center
+  }
+}
+
+@theme inline {
+  --animate-shine: shine var(--duration) infinite linear;
+ 
+  @keyframes shine {
+    0% {
+      background-position: 0% 0%;
+    }
+    50% {
+      background-position: 100% 100%;
+    }
+    to {
+      background-position: 0% 0%;
+    }
   }
 }
