@@ -76,7 +76,7 @@ export default function AppWrapper() {
   }
 
   return (
-    <div className="bg-[url('/login-bg.png')] bg-cover bg-center h-screen w-full relative overflow-y-auto flex flex-col gap-10 p-12 py-6">
+    <div className="bg-[url('/login-bg.png')] bg-cover bg-center h-screen w-full relative overflow-y-auto flex flex-col gap-10 p-6">
       <div className="fixed inset-0 bg-black/50" />
       <div className="flex justify-between items-center relative z-10">
         <div className="flex gap-4 items-center">
