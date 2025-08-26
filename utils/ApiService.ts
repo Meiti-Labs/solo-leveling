@@ -13,7 +13,7 @@ import { IApiResponse } from "@/types/types";
   
   class ApiService {
     private static axiosInstance = axios.create({
-      baseURL:  `${window.location.origin}/api`,
+      baseURL:  `/api`,
       headers: {
         "Content-Type": "application/json",
       },
@@ -78,7 +78,7 @@ import { IApiResponse } from "@/types/types";
       }
   
       if (IApiResponse.success && IApiResponse.messages?.length) {
-        IApiResponse.messages.forEach((msg) => toast.success(msg));
+        // IApiResponse.messages.forEach((msg) => toast.success(msg));
       }
   
       return {
