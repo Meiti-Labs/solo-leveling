@@ -43,6 +43,17 @@
   --radius-xl: calc(var(--radius) + 4px);
   --animate-shine: shine var(--duration) infinite linear;
   @keyframes shine {
+    0% {
+      background-position: 0% 0%;
+    }
+    50% {
+      background-position: 100% 100%;
+    }
+    to {
+      background-position: 0% 0%;
+    }
+  }
+  @keyframes shine {
   0% {
     background-position: 0% 0%;
     }
@@ -132,20 +143,20 @@
     @apply bg-background text-foreground;
   }
   .glass {
-    @apply backdrop-blur-xs rounded-2xl bg-blue-500/10 ;
+    @apply backdrop-blur-xs rounded-2xl bg-blue-500/10;
   }
 
   .col-centered {
-    @apply flex flex-col justify-center items-center
+    @apply flex flex-col justify-center items-center;
   }
   .centered {
-    @apply flex justify-center items-center
+    @apply flex justify-center items-center;
   }
 }
 
 @theme inline {
   --animate-shine: shine var(--duration) infinite linear;
- 
+
   @keyframes shine {
     0% {
       background-position: 0% 0%;
@@ -157,4 +168,32 @@
       background-position: 0% 0%;
     }
   }
+}
+
+.card-fade-bottom {
+  background: #201433;
+  background: linear-gradient(
+    180deg,
+    rgba(32, 20, 51, 1) 0%,
+    rgba(32, 20, 51, 0.94) 25%,
+    rgba(32, 20, 51, 0.93) 32%,
+    rgba(32, 20, 51, 0.87) 44%,
+    rgba(32, 20, 51, 0.73) 61%,
+    rgba(32, 20, 51, 0.58) 76%,
+    rgba(32, 20, 51, 0) 100%
+  );
+}
+
+.card-fade-top {
+  background: #201433;
+  background: linear-gradient(
+    0deg,
+    rgba(32, 20, 51, 1) 0%,
+    rgba(32, 20, 51, 0.94) 25%,
+    rgba(32, 20, 51, 0.93) 32%,
+    rgba(32, 20, 51, 0.87) 44%,
+    rgba(32, 20, 51, 0.73) 61%,
+    rgba(32, 20, 51, 0.58) 76%,
+    rgba(32, 20, 51, 0) 100%
+  );
 }

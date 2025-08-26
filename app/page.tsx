@@ -1,12 +1,12 @@
-"use client"
-import dynamic from "next/dynamic";
+"use client";
+import { ShineBorder } from "@/components/magicui/shine-border";
+import Box from "@/components/ui/box";
 
-const AppWrapper = dynamic(() => import("@/components/app-wrapper"), {
-    ssr: false,
-  });
 
 export default function Home() {
-  
-
-  return <AppWrapper />;
+  return (
+    <div className="">
+     <Box><div className="p-2">slama</div></Box>
+    </div>
+  );
 }
