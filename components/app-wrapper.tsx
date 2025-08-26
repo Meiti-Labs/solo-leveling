@@ -3,24 +3,14 @@
 import { useLaunchParams } from "@telegram-apps/sdk-react";
 import { useEffect, useState } from "react";
 import ApiService from "@/utils/ApiService";
-import { ObjectId } from "mongoose";
-import { userStore } from "@/store/userStore";
+import { IUserData, userStore } from "@/store/userStore";
 
 import Header from "./shared/site-header";
 import Footer from "./shared/site-footer";
 import { ShineBorder } from "./ui/shine-border";
 
-export interface IUserData {
-  _id: ObjectId;
-  telegramId: string;
-  username: string;
-  totalXP: number;
-  level: number;
-  cash: number;
-  createdAt: Date;
-  updatedAt: Date;
-  __v: number;
-}
+
+
 
 const pages = {};
 
