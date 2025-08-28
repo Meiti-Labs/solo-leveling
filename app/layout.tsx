@@ -21,8 +21,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${FontCinzel.className}  antialiased dark`}>
-        <Toaster />
         <AppProvider>{children}</AppProvider>
+        <Toaster />
       </body>
     </html>
   );

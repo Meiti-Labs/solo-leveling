@@ -6,7 +6,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button, buttonVariants } from "../ui/button";
 import { VariantProps } from "class-variance-authority";
@@ -37,7 +36,7 @@ const DialogButton: React.FunctionComponent<IDialogButtonProps> = ({
       <Button {...buttonProps} size={"icon"} className={"bg-transparent text-white" + buttonProps.className }onClick={handleOpenDialog}>
       <Icon icon="picon:right" />
       </Button>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] w-full overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
