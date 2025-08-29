@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     req.headers.get("authorization")?.replace(/^tma\s+/i, "") || "";
 
   try {
-    validate(initData, process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN!);
+    validate(initData, process.env.TELEGRAM_BOT_TOKEN!);
     return ApiResponse.success({ messages: ["verified"] });
   } catch (err) {
     console.log({ err, initData });
