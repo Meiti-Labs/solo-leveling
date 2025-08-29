@@ -1,5 +1,10 @@
 import * as React from "react";
-import { useForm, useFieldArray, Controller } from "react-hook-form";
+import {
+  useForm,
+  useFieldArray,
+  Controller,
+  FieldErrors,
+} from "react-hook-form";
 import * as z from "zod";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { v4 as uuidv4 } from "uuid";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
@@ -28,30 +34,9 @@ import {
 import ApiService from "@/utils/ApiService";
 import { userStore } from "@/store/userStore";
 import { DatePicker } from "@/components/ui/date-picker";
-
-// 1️⃣ Zod schema
-const taskSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().optional(),
-  category: z.enum(["physical", "mind", "emotional", "social", "career"]),
-  totalProgress: z.number().default(1),
-});
-
-const achievementSchema = z.object({
-  name: z.string().min(1, "Achievement name required"),
-  description: z.string().optional(),
-  icon: z.string().min(1, "icon image required"),
-});
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const questSchema = z.object({
-  title: z.string().min(1),
-  description: z.string().optional(),
-  isDaily: z.boolean().default(false),
-  deadline: z.string().optional(),
-  achievement: achievementSchema.optional(),
-  tasks: z.array(taskSchema).min(1, "At least one task required"),
-});
+import { questSchema } from "@/schemas/questSchema";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 
 // 2️⃣ Infer types
 type QuestFormValues = z.infer<typeof questSchema>;
@@ -62,19 +47,17 @@ interface ICreateQuestFormProps {
 
 const CreateQuestForm: React.FC<ICreateQuestFormProps> = ({ setOpen }) => {
   const { user } = userStore();
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-    watch,
-  } = useForm<QuestFormValues>({
+  const [hasAchievment, setHasAchievement] = React.useState(false);
+  const { control, handleSubmit, formState, watch, resetField } = useForm({
+    resolver: zodResolver(questSchema),
     defaultValues: {
       title: "",
       description: "",
       isDaily: false,
       deadline: "",
-      achievement: { name: "", description: "", icon: "" },
-      tasks: [{ title: "", description: "", category: "mind" }],
+      achievement: undefined,
+      tasks: [{ title: "", description: "", category: "mind", uuid: uuidv4() }],
+      userTelegramId: user?.telegramId,
     },
   });
 
@@ -84,22 +67,34 @@ const CreateQuestForm: React.FC<ICreateQuestFormProps> = ({ setOpen }) => {
   });
 
   const onSubmit = (data: QuestFormValues) => {
-    debugger;
     ApiService.post("/secure/quest/create", {
       ...data,
       userTelegramId: user?.telegramId,
-    }).then((res)=>{
-      
-      if(res.resultCode == "Ok"){
+    }).then((res) => {
+      if (res.resultCode == "Ok") {
         setOpen(false);
       }
     });
   };
-  
-  
+
+  const onError = (errors: FieldErrors<QuestFormValues>) => {
+    if (errors.achievement) {
+      toast.error("Fill achievment fields or close it.");
+      return;
+    }
+
+    if (errors.tasks) {
+      toast.error("Fill Tasks fields or remove it.");
+      return;
+    }
+
+    const first = Object.values(errors)[0]?.message?.toString() ?? "";
+    toast.error(first);
+  };
+  const { errors } = formState;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit, onError)} className="space-y-4">
       {/* Title */}
       <Controller
         control={control}
@@ -107,7 +102,7 @@ const CreateQuestForm: React.FC<ICreateQuestFormProps> = ({ setOpen }) => {
         render={({ field }) => <Input {...field} placeholder="Quest Title" />}
       />
       {errors.title && (
-        <span className="text-red-500">{errors.title.message}</span>
+        <span className="text-red-500 text-xs">{errors.title.message}</span>
       )}
 
       {/* Description */}
@@ -157,7 +152,6 @@ const CreateQuestForm: React.FC<ICreateQuestFormProps> = ({ setOpen }) => {
                   field.onChange(date ? date.toISOString() : null)
                 }
                 disabled={watch("isDaily")}
-                
               />
             </CardContent>
           </Card>
@@ -178,6 +172,7 @@ const CreateQuestForm: React.FC<ICreateQuestFormProps> = ({ setOpen }) => {
                     description: "",
                     category: "mind",
                     totalProgress: 1,
+                    uuid: uuidv4(),
                   })
                 }
               >
@@ -210,6 +205,7 @@ const CreateQuestForm: React.FC<ICreateQuestFormProps> = ({ setOpen }) => {
                   <Input
                     {...field}
                     type="number"
+                    onChange={(e) => field.onChange(Number(e.target.value))}
                     placeholder="Total Progress"
                   />
                 )}
@@ -245,32 +241,42 @@ const CreateQuestForm: React.FC<ICreateQuestFormProps> = ({ setOpen }) => {
         </CardContent>
       </Card>
 
-      <Accordion type="single" collapsible className="w-full">
+      <Accordion
+        type="single"
+        collapsible
+        className="w-full"
+        onValueChange={(val) => {
+          setHasAchievement(!!val);
+          if (!val) resetField("achievement", undefined);
+        }}
+      >
         <AccordionItem value="achievement">
           <AccordionTrigger className="font-bold">Achievement</AccordionTrigger>
-          <AccordionContent className="space-y-2 p-4">
-            <Controller
-              control={control}
-              name="achievement.name"
-              render={({ field }) => (
-                <Input {...field} placeholder="Achievement Name" />
-              )}
-            />
-            <Controller
-              control={control}
-              name="achievement.description"
-              render={({ field }) => (
-                <Input {...field} placeholder="Achievement Description" />
-              )}
-            />
-            <Controller
-              control={control}
-              name="achievement.icon"
-              render={({ field }) => (
-                <Input {...field} placeholder="Icon (yesicons)" />
-              )}
-            />
-          </AccordionContent>
+          {hasAchievment && (
+            <AccordionContent className="space-y-2 p-4">
+              <Controller
+                control={control}
+                name="achievement.name"
+                render={({ field }) => (
+                  <Input {...field} placeholder="Achievement Name" />
+                )}
+              />
+              <Controller
+                control={control}
+                name="achievement.description"
+                render={({ field }) => (
+                  <Input {...field} placeholder="Achievement Description" />
+                )}
+              />
+              <Controller
+                control={control}
+                name="achievement.icon"
+                render={({ field }) => (
+                  <Input {...field} placeholder="Icon (yesicons)" />
+                )}
+              />
+            </AccordionContent>
+          )}
         </AccordionItem>
       </Accordion>
 

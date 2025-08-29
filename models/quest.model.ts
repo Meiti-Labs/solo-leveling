@@ -19,8 +19,8 @@ const TaskSchema = new Schema({
 
 const QuestSchema = new Schema(
   {
-    userTelegramId: { type: String, required: true, },
-    title: String,
+    userTelegramId: { type: String, required: true },
+    title: {type: String, unique: true},
     description: String,
     isDaily: { type: Boolean, default: false },
     deadline: {type: Date},
