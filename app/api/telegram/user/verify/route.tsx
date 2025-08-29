@@ -25,10 +25,10 @@ export async function GET(req: NextRequest) {
   try {
     validate(initData, process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN!);
     return ApiResponse.success({ messages: ["verified"] });
-  } catch {
+  } catch (err) {
+    console.log({err});
     return ApiResponse.error({ messages: ["verification faild"] });
   }
-
 }
 
 export async function POST(req: NextRequest) {
