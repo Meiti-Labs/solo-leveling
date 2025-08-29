@@ -1,6 +1,7 @@
 "use client";
 
 import { useLaunchParams } from "@telegram-apps/sdk-react";
+import { useRawInitData } from "@telegram-apps/sdk-react";
 import { useEffect, useState } from "react";
 import ApiService from "@/utils/ApiService";
 import { IUserData, userStore } from "@/store/userStore";
@@ -10,7 +11,6 @@ import Footer from "./shared/site-footer";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { Button } from "./ui/button";
-import { Toaster } from "sonner";
 
 export type IProgress =
   | "Getting started"
@@ -29,8 +29,12 @@ export default function AppProvider({
   const data = useLaunchParams();
   const { update } = userStore();
 
+  const rawInitData = useRawInitData();
+
   useEffect(() => {
     if (data) {
+      localStorage.setItem("tma", rawInitData || "");
+      ApiService.get(`/telegram/user/verify`);
       setProgress("Verifiying Telegram Request");
       ApiService.post<IUserData>(`/telegram/user/verify`, {
         ...data.tgWebAppData,
@@ -42,7 +46,7 @@ export default function AppProvider({
         }
       });
     }
-  }, [data, update]);
+  }, []);
 
   if (!ready) {
     return (

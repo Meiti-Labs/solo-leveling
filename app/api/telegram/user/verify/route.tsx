@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { connectDB } from "@/lib/db";
 import _user from "@/models/user.model";
 import { ApiResponse } from "@/utils/ServiceResponse";
+import { validate } from "@telegram-apps/init-data-node";
 
 interface TelegramUser {
   first_name: string;
@@ -15,6 +16,19 @@ interface TelegramAuthData {
   hash: string;
   signature: string;
   user: TelegramUser;
+}
+
+export async function GET(req: NextRequest) {
+  const initData =
+    req.headers.get("authorization")?.replace(/^tma\s+/i, "") || "";
+
+  try {
+    validate(initData, process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN!);
+    return ApiResponse.success({ messages: ["verified"] });
+  } catch {
+    return ApiResponse.error({ messages: ["verification faild"] });
+  }
+
 }
 
 export async function POST(req: NextRequest) {
@@ -33,18 +47,23 @@ export async function POST(req: NextRequest) {
         httpOnly: true,
       });
 
-      return ApiResponse.success({messages: [`WELCOME ${user.username}`], data: user });
+      return ApiResponse.success({
+        messages: [`WELCOME ${user.username}`],
+        data: user,
+      });
     } else {
       const newUserEntity = new _user({
         telegramId: payload.user.id,
         username: payload.user.first_name,
       });
       const newUserData = (await newUserEntity.save()).toObject();
-      return ApiResponse.success({messages: [`WELCOME ${newUserData.username}`], data: newUserData });
+      return ApiResponse.success({
+        messages: [`WELCOME ${newUserData.username}`],
+        data: newUserData,
+      });
     }
   } catch (err) {
     if (process.env.NODE_ENV === "production") {
-
       console.log({ err });
 
       return ApiResponse.error();
