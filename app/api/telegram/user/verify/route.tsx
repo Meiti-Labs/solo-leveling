@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     validate(initData, process.env.NEXT_PUBLIC_TELEGRAM_BOT_TOKEN!);
     return ApiResponse.success({ messages: ["verified"] });
   } catch (err) {
-    console.log({err});
+    console.log({ err, initData });
     return ApiResponse.error({ messages: ["verification faild"] });
   }
 }
