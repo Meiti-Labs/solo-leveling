@@ -7,10 +7,6 @@ import { NextRequest } from "next/server";
 export async function POST(request: NextRequest) {
   try {
     await connectDB();
-
-    console.log(request.headers);
-    
-
     const data = await request.json();
     const validate = questSchema.safeParse(data);
 
@@ -21,8 +17,6 @@ export async function POST(request: NextRequest) {
       return ApiResponse.error({ messages: [validate.error.message] });
     }
   } catch (error) {
-    console.log({ error });
-
     const message =
       error instanceof Error ? error.message : String(error || "Unknown error");
 

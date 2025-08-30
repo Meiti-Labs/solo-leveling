@@ -6,7 +6,6 @@ import axios, {
 } from "axios";
 import { toast } from "sonner";
 import { IApiResponse } from "@/types/types";
-import { retrieveLaunchParams } from "@telegram-apps/sdk";
 class ApiService {
   private static axiosInstance = axios.create({
     baseURL: `/api`,

@@ -26,11 +26,13 @@ export default function AppProvider({
 }) {
   const [progress, setProgress] = useState<IProgress>("Getting started");
   const [ready, setReady] = useState(false);
-
+  
   const data = useLaunchParams();
+  const rawInitData = useRawInitData();
+
+  
   const { update } = userStore();
 
-  const rawInitData = useRawInitData();
 
   useEffect(() => {
     if (data) {
