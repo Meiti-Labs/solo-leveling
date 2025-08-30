@@ -1,6 +1,6 @@
 "use client";
 
-import { useLaunchParams } from "@telegram-apps/sdk-react";
+import { useLaunchParams, useRawLaunchParams } from "@telegram-apps/sdk-react";
 import { useRawInitData } from "@telegram-apps/sdk-react";
 import { useEffect, useState } from "react";
 import ApiService from "@/utils/ApiService";
@@ -29,11 +29,11 @@ export default function AppProvider({
   const data = useLaunchParams();
   const { update } = userStore();
 
-  const rawInitData = useRawInitData();
+  const rawInitData = useRawLaunchParams();
 
   useEffect(() => {
     if (data) {
-      localStorage.setItem("tma", rawInitData || "");
+      localStorage.setItem("tma", decodeURIComponent(rawInitData) || "");
       ApiService.get(`/telegram/user/verify`);
       setProgress("Verifiying Telegram Request");
       ApiService.post<IUserData>(`/telegram/user/verify`, {
