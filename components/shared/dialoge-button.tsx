@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button, buttonVariants } from "../ui/button";
 import { VariantProps } from "class-variance-authority";
-import { Icon } from "@iconify/react/dist/iconify.js";
+import { PiconRight } from "../icons/icons";
 
 interface IDialogButtonProps {
   buttonProps?: React.ComponentProps<"button"> &
@@ -34,7 +34,7 @@ const DialogButton: React.FunctionComponent<IDialogButtonProps> = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <Button {...buttonProps} size={"icon"} className={"bg-transparent text-white" + buttonProps.className }onClick={handleOpenDialog}>
-      <Icon icon="picon:right" />
+      <PiconRight/>
       </Button>
       <DialogContent className="max-h-[90vh] w-full overflow-x-hidden">
         <DialogHeader>
