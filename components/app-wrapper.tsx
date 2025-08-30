@@ -33,7 +33,7 @@ export default function AppProvider({
 
   useEffect(() => {
     if (data) {
-      localStorage.setItem("tma", decodeURIComponent(rawInitData) || "");
+      localStorage.setItem("tma", JSON.stringify(data.tgWebAppData) || "");
       ApiService.get(`/telegram/user/verify`);
       setProgress("Verifiying Telegram Request");
       ApiService.post<IUserData>(`/telegram/user/verify`, {
