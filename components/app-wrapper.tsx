@@ -11,6 +11,7 @@ import Footer from "./shared/site-footer";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { Button } from "./ui/button";
+import JsonView, { JsonViewProps } from "react18-json-view";
 
 export type IProgress =
   | "Getting started"
@@ -54,8 +55,11 @@ export default function AppProvider({
       <div className="bg-[url('/main.jpg')] bg-cover bg-center h-screen w-full relative flex flex-col justify-between ">
         <div className="h-32 mb-auto card-fade-bottom flex justify-center items-center">
           <span className="text-3xl">SOLO LEVELING</span>
-          <p>{window?.Telegram?.WebApp?.initData}</p>
         </div>
+          <p>
+            {" "}
+            <JsonView src={window.Telegram} collapsed={true} />
+          </p>
         <div className="h-80 p-5  card-fade-top ">
           <h1 className="text-5xl mb-3">
             YOUR <br /> <span className="text-[#BE99FE]">AWAKENING</span> <br />{" "}
