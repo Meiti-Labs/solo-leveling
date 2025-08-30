@@ -2,30 +2,36 @@ import * as React from "react";
 import Box from "../ui/box";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
-
+import {
+  BxBxsTrophy,
+  GridiconsAdd,
+  IconamoonHomeFill,
+  IconamoonLightning1Fill,
+  IonSettings,
+} from "../icons/icons";
 
 <Icon icon="mdi-light:home" />;
 
 const menu = [
   {
     route: "/",
-    Icon: "iconamoon:home-fill",
+    Icon: <IconamoonHomeFill fontSize={24}/>,
   },
   {
     route: "/task",
-    Icon: "iconamoon:lightning-1-fill",
+    Icon: <IconamoonLightning1Fill fontSize={24}/>,
   },
   {
     route: "/create",
-    Icon: "gridicons:add",
+    Icon: <GridiconsAdd fontSize={24}/>,
   },
   {
     route: "/achievments",
-    Icon: "bxs:trophy",
+    Icon: <BxBxsTrophy fontSize={24}/>,
   },
   {
     route: "/settings",
-    Icon: "material-symbols-light:settings",
+    Icon: <IonSettings fontSize={24}/>,
   },
 ];
 
@@ -35,11 +41,13 @@ export default function Footer() {
       <Box className="w-auto p-1 h-12 flex ">
         {menu.map((item, index) => (
           <Link
-          key={index}
+            key={index}
             href={item.route}
             className="p-2 h-full w-12 bg-white/10 flex justify-center items-center text-purple-500"
           >
-            <Icon icon={item.Icon} fontSize={26} />
+            {
+              item.Icon
+            }
           </Link>
         ))}
       </Box>
