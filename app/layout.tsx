@@ -20,9 +20,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        <script defer src="https://telegram.org/js/telegram-web-app.js?59"></script>
-      </head>
       <body className={`${FontCinzel.className}  antialiased dark`}>
         <AppProvider>{children}</AppProvider>
         <Toaster />
