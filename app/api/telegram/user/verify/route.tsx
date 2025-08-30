@@ -5,7 +5,7 @@ import { connectDB } from "@/lib/db";
 import _user from "@/models/user.model";
 import { ApiResponse } from "@/utils/ServiceResponse";
 import { validate } from "@telegram-apps/init-data-node";
-
+import VerifyTelegramRequest from "@/lib/telegram-validator";
 
 interface TelegramUser {
   first_name: string;
@@ -19,22 +19,10 @@ interface TelegramAuthData {
   user: TelegramUser;
 }
 
-export async function GET(req: NextRequest) {
-  const initData =
-    req.headers.get("authorization")?.replace(/^tma\s+/i, "") || "";
-
-  try {
-    validate(initData, process.env.TELEGRAM_BOT_TOKEN!);
-    return ApiResponse.success({ messages: ["verified"] });
-  } catch (err) {
-    console.log({ err, initData, });
-    return ApiResponse.error({ messages: ["verification faild"] });
-  }
-}
-
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
+    VerifyTelegramRequest(req);
     const payload: TelegramAuthData = await req.json();
 
     const user = await _user.findOne({ telegramId: payload.user.id });
