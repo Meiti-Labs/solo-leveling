@@ -19,3 +19,12 @@ export interface IApiResponse<T = unknown> {
     responseData?: T; // Some APIs may use 'payload' instead
     status?: number;
   }
+
+  export type TelegramUser = {
+    id: number;                 // Telegram user ID
+    first_name: string;         // User's first name
+    last_name?: string;         // Optional last name
+    username?: string;          // Optional username
+    photo_url?: string;         // Optional profile picture URL
+    language_code?: string;     // Optional language code (e.g., "en")
+  };
