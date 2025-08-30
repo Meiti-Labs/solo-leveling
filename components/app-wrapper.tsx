@@ -30,15 +30,13 @@ export default function AppProvider({
   const data = useLaunchParams();
   const rawInitData = useRawInitData();
 
-  
+
   const { update } = userStore();
 
 
   useEffect(() => {
     if (data) {
       localStorage.setItem("tma", rawInitData || "");
-
-      ApiService.get(`/telegram/user/verify`);
       setProgress("Verifiying Telegram Request");
       ApiService.post<IUserData>(`/telegram/user/verify`, {
         ...data.tgWebAppData,
@@ -58,10 +56,6 @@ export default function AppProvider({
         <div className="h-32 mb-auto card-fade-bottom flex justify-center items-center">
           <span className="text-3xl">SOLO LEVELING</span>
         </div>
-          <p>
-            {" "}
-            <JsonView src={window.Telegram} collapsed={true} />
-          </p>
         <div className="h-80 p-5  card-fade-top ">
           <h1 className="text-5xl mb-3">
             YOUR <br /> <span className="text-[#BE99FE]">AWAKENING</span> <br />{" "}
