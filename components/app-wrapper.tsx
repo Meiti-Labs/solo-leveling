@@ -34,6 +34,8 @@ export default function AppProvider({
   useEffect(() => {
     if (data) {
       localStorage.setItem("tma", rawInitData || "");
+
+      alert(window?.Telegram?.WebApp?.initData);
       ApiService.get(`/telegram/user/verify`);
       setProgress("Verifiying Telegram Request");
       ApiService.post<IUserData>(`/telegram/user/verify`, {
