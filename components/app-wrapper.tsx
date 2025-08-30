@@ -35,7 +35,6 @@ export default function AppProvider({
     if (data) {
       localStorage.setItem("tma", rawInitData || "");
 
-      alert(window?.Telegram?.WebApp?.initData);
       ApiService.get(`/telegram/user/verify`);
       setProgress("Verifiying Telegram Request");
       ApiService.post<IUserData>(`/telegram/user/verify`, {
@@ -55,6 +54,7 @@ export default function AppProvider({
       <div className="bg-[url('/main.jpg')] bg-cover bg-center h-screen w-full relative flex flex-col justify-between ">
         <div className="h-32 mb-auto card-fade-bottom flex justify-center items-center">
           <span className="text-3xl">SOLO LEVELING</span>
+          <p>{window?.Telegram?.WebApp?.initData}</p>
         </div>
         <div className="h-80 p-5  card-fade-top ">
           <h1 className="text-5xl mb-3">
