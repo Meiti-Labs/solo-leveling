@@ -6,6 +6,42 @@ import _user from "@/models/user.model";
 import { ApiResponse } from "@/utils/ServiceResponse";
 import { validate } from "@telegram-apps/init-data-node";
 
+
+import crypto from "crypto";
+import querystring from "node:querystring";
+
+function validateTelegram(initData: string, botToken: string) {
+  // Parse query string
+  const params = querystring.parse(initData);
+
+  const hashFromTelegram = params.hash as string;
+  delete params.hash; // remove hash for HMAC calculation
+
+  // Build data-check-string (sorted by key)
+  const dataCheckString = Object.keys(params)
+    .sort()
+    .map((key) => `${key}=${params[key]}`)
+    .join("\n");
+
+  // Key = SHA256 of bot token
+  const secretKey = crypto.createHash("sha256").update(botToken).digest();
+
+  // Compute HMAC-SHA256
+  const hmac = crypto.createHmac("sha256", secretKey)
+    .update(dataCheckString)
+    .digest("hex");
+
+  // Compare hashes
+  if (hmac !== hashFromTelegram) {
+    throw new Error("Telegram signature invalid");
+  }
+
+  // Parse user JSON
+  const user = JSON.parse(params.user as string);
+  return user;
+}
+
+
 interface TelegramUser {
   first_name: string;
   id: number;
@@ -23,7 +59,7 @@ export async function GET(req: NextRequest) {
     req.headers.get("authorization")?.replace(/^tma\s+/i, "") || "";
 
   try {
-    validate(initData, process.env.TELEGRAM_BOT_TOKEN!);
+    validateTelegram(initData, process.env.TELEGRAM_BOT_TOKEN!);
     return ApiResponse.success({ messages: ["verified"] });
   } catch (err) {
     console.log({ err, initData, });
