@@ -44,7 +44,7 @@ class ApiService {
 
     if (!IApiResponse.success) {
       if (Array.isArray(IApiResponse.messages)) {
-        IApiResponse.messages.forEach((message)=> toast.success(message))
+        IApiResponse.messages.forEach((msg) => !!msg && toast.error(msg));
       }
 
       if (IApiResponse.resultCode === "Forbidden") {
@@ -61,7 +61,7 @@ class ApiService {
     }
 
     if (IApiResponse.success && IApiResponse.messages?.length) {
-      IApiResponse.messages.forEach((msg) => toast.success(msg));
+      IApiResponse.messages.forEach((msg) => !!msg && toast.success(msg));
     }
 
     return {
@@ -81,7 +81,7 @@ class ApiService {
       const IApiResponse = error.response.data;
 
       if (IApiResponse?.messages?.length) {
-        IApiResponse.messages.forEach((msg) => toast.error(msg));
+        IApiResponse.messages.forEach((msg) => !!msg && toast.success(msg));
       }
 
       if (
