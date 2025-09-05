@@ -57,7 +57,6 @@ const CreateQuestForm: React.FC<ICreateQuestFormProps> = ({ setOpen }) => {
       deadline: "",
       achievement: undefined,
       tasks: [{ title: "", description: "", category: "mind", uuid: uuidv4() }],
-      userTelegramId: user?.telegramId,
     },
   });
 
@@ -67,9 +66,8 @@ const CreateQuestForm: React.FC<ICreateQuestFormProps> = ({ setOpen }) => {
   });
 
   const onSubmit = (data: QuestFormValues) => {
-    ApiService.post("/secure/quest/create", {
+    ApiService.post("/user/quests", {
       ...data,
-      userTelegramId: user?.telegramId,
     }).then((res) => {
       if (res.resultCode == "Ok") {
         setOpen(false);
@@ -173,6 +171,7 @@ const CreateQuestForm: React.FC<ICreateQuestFormProps> = ({ setOpen }) => {
                     category: "mind",
                     totalProgress: 1,
                     uuid: uuidv4(),
+                    xp: 10,
                   })
                 }
               >
@@ -207,6 +206,18 @@ const CreateQuestForm: React.FC<ICreateQuestFormProps> = ({ setOpen }) => {
                     type="number"
                     onChange={(e) => field.onChange(Number(e.target.value))}
                     placeholder="Total Progress"
+                  />
+                )}
+              />
+              <Controller
+                control={control}
+                name={`tasks.${index}.xp`}
+                render={({ field }) => (
+                  <Input
+                    {...field}
+                    type="number"
+                    onChange={(e) => field.onChange(Number(e.target.value))}
+                    placeholder="XP amount"
                   />
                 )}
               />
