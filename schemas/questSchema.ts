@@ -1,3 +1,4 @@
+import { progress } from "motion/react";
 import z from "zod";
 
 // 1️⃣ Zod schema
@@ -6,7 +7,8 @@ const taskSchema = z.object({
   description: z.string().optional(),
   category: z.enum(["physical", "mind", "emotional", "social", "career"]),
   totalProgress: z.number().default(1),
-  uuid: z.uuidv4("UUID for each task is required.")
+  uuid: z.uuidv4("UUID for each task is required."),
+  xp: z.number("You should define the amount of xp"),
 });
 
 const achievementSchema = z.object({
@@ -23,5 +25,10 @@ export const questSchema = z.object({
   deadline: z.string().optional(),
   achievement: achievementSchema.optional(),
   tasks: z.array(taskSchema).min(1, "At least one task required"),
-  userTelegramId: z.string("user telegram id is required"),
+});
+
+export const updateQuestSchema = z.object({
+  questId: z.string("QuestId is required."),
+  taskId: z.string("TaskId is required."),
+  progress: z.number("Progress is required."),
 });
