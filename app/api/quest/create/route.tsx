@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
     const data = await request.json();
-    const validate = questSchema.safeParse(data);
+    const validate = questSchema.safeParse({...data, });
 
     if (validate.success) {
       await new QuestModel(validate.data).save();
