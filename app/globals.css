@@ -184,6 +184,20 @@
   );
 }
 
+.card-fade-top-black {
+  background: rgb(29, 29, 29);
+  background: linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 0.94) 25%,
+    rgba(0, 0, 0, 0.87) 44%,
+    rgba(0, 0, 0, 0.73) 61%,
+    rgba(0, 0, 0, 0.58) 76%,
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
+
 .card-fade-top {
   background: #201433;
   background: linear-gradient(
