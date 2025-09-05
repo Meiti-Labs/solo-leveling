@@ -16,16 +16,26 @@ interface IDialogButtonProps {
     VariantProps<typeof buttonVariants> & {
       asChild?: boolean;
     };
-    title: string;
-    description?: string;
-    children: ({open,setOpen}: {open: boolean, setOpen: React.Dispatch<React.SetStateAction<boolean>>}) => React.ReactNode;
+  title: string;
+  buttonIcon?: React.JSX.Element;
+  description?: string;
+  dialogeClassName?: string;
+  children: ({
+    open,
+    setOpen,
+  }: {
+    open: boolean;
+    setOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  }) => React.ReactNode;
 }
 
 const DialogButton: React.FunctionComponent<IDialogButtonProps> = ({
   buttonProps = {},
   title,
   description,
-  children
+  children,
+  buttonIcon = <PiconRight />,
+  dialogeClassName = "",
 }) => {
   const [open, setOpen] = React.useState(false);
   const handleOpenDialog = () => {
@@ -33,18 +43,25 @@ const DialogButton: React.FunctionComponent<IDialogButtonProps> = ({
   };
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <Button {...buttonProps} size={"icon"} className={"bg-transparent text-white" + buttonProps.className }onClick={handleOpenDialog}>
-      <PiconRight/>
+      <Button
+        {...buttonProps}
+        size={"icon"}
+        className={"bg-transparent text-white" + buttonProps.className}
+        onClick={handleOpenDialog}
+      >
+        {buttonIcon}
       </Button>
-      <DialogContent className="max-h-[90vh] w-full overflow-x-hidden">
+      <DialogContent
+        className={"max-h-[90vh]  w-full overflow-x-hidden " + dialogeClassName}
+      >
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>
-           {description}
+          <DialogTitle className="border  text-centerfont-normal text-shadow-lg text-shadow-pink-200 border-pink-100/30 w-fit  mx-auto p-3 px-4">
+            {title}
+          </DialogTitle>
+          <DialogDescription className="my-5 text-center text-white text-shadow-white/75 text-shadow-xs font-semibold">
+            {description}
           </DialogDescription>
-          <div>
-            {children({open,setOpen})}
-          </div>
+          <div>{children({ open, setOpen })}</div>
         </DialogHeader>
       </DialogContent>
     </Dialog>
