@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
       });
     }
   } catch (err) {
-    return ErrorHandler(err);
+    console.log("hre")
+    return ErrorHandler(err, "Verification Faild");
   }
 }
