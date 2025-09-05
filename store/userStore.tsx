@@ -1,9 +1,8 @@
-"use client"
+"use client";
 
-
-import { ObjectId } from 'mongoose';
-import { create } from 'zustand'
-
+import { IQuestResponse } from "@/models/quest.model";
+import { ObjectId } from "mongoose";
+import { create } from "zustand";
 
 export interface IUserData {
   _id: ObjectId;
@@ -18,11 +17,15 @@ export interface IUserData {
 }
 
 interface UserState {
-  user: IUserData | null,
-  update: (newUser: IUserData) => void
+  user: IUserData | undefined;
+  update: (newUser: IUserData) => void;
+  quests: IQuestResponse[] | undefined;
+  updateQuests: (quest: IQuestResponse[]) => void;
 }
 
- export const  userStore = create<UserState>()((set) => ({
-  user: null,
+export const userStore = create<UserState>()((set) => ({
+  user: undefined,
   update: (newUser) => set(() => ({ user: newUser })),
-}))
+  quests: [],
+  updateQuests: (quest) => set(() => ({ quests: quest })),
+}));
