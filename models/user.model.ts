@@ -10,7 +10,7 @@ const SubSkillSchema = new Schema({
 const CategorySchema = new Schema({
   type: Map,
   of: SubSkillSchema,
-  default: {}
+  default: {},
 });
 
 // Achievement schema
@@ -18,19 +18,19 @@ const AchievementSchema = new Schema({
   name: { type: String, required: true },
   description: { type: String },
   date: { type: Date, default: Date.now },
-  icon: { type: String, required: true }
+  icon: { type: String, required: true },
 });
-
-
 
 // Main User schema
 const userSchema = new Schema(
   {
+    
     telegramId: { type: String, required: true, unique: true },
     username: String,
     totalXP: { type: Number, default: 0 },
     level: { type: Number, default: 1 },
     cash: { type: Number, default: 0 },
+    friends: { type: [String], default: [] },
 
     // Categories
     categories: {
@@ -38,10 +38,10 @@ const userSchema = new Schema(
       mind: { type: CategorySchema, default: {} },
       emotional: { type: CategorySchema, default: {} },
       social: { type: CategorySchema, default: {} },
-      career: { type: CategorySchema, default: {} }
+      career: { type: CategorySchema, default: {} },
     },
 
-    achievements: { type: [AchievementSchema], default: [] }
+    achievements: { type: [AchievementSchema], default: [] },
   },
   { timestamps: true }
 );
