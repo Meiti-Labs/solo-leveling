@@ -37,7 +37,7 @@ const menu = [
 
 export default function Footer() {
   return (
-    <div className="h-18 flex justify-center items-center">
+    <div className="h-24 card-fade-top-black flex justify-center items-center fixed bottom-0 w-full">
       <Box className="w-auto p-1 h-12 flex ">
         {menu.map((item, index) => (
           <Link
