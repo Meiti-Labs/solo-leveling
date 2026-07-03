@@ -14,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased dark">
+      <body className="font-sans antialiased dark">
         <TelegramProvider>{children}</TelegramProvider>
         <Toaster />
       </body>
