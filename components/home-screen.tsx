@@ -5,6 +5,7 @@ import { useLaunchParams } from "@telegram-apps/sdk-react";
 import { ExternalLink } from "lucide-react";
 import HomeHeader  from "@/components/home-header";
 import LevelProgressCard from "@/components/level-progress-card";
+import CoreAttributesSection from "@/components/core-attributes-section";
 
 export default function HomeScreen() {
   const launchParams = useLaunchParams();
@@ -12,11 +13,13 @@ export default function HomeScreen() {
   const startParam = launchParams.tgWebAppStartParam ?? "none";
 
   return (
-    <main className="mx-auto flex min-h-[calc(100svh-8rem)] w-full max-w-md flex-col justify-between px-3 py-4">
+    <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
       <section className="space-y-2">
         <HomeHeader />
         <LevelProgressCard />
       </section>
+
+      <CoreAttributesSection />
 
       <section className="space-y-3 rounded-lg border border-border/60 bg-card/70 p-4 font-sans text-sm shadow-sm backdrop-blur">
         <div className="flex items-center justify-between gap-4">
