@@ -1,17 +1,11 @@
-"use client";
-import { Cinzel } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
-import dynamic from "next/dynamic";
+import TelegramProvider from "@/components/telegram-provider";
 
-const AppProvider = dynamic(() => import("@/components/app-wrapper"), {
-  ssr: false,
-});
-
-const FontCinzel = Cinzel({
-  variable: "--font-cinzel",
-  subsets: ["latin"],
-});
+export const metadata = {
+  title: "Solo Leveling Mini",
+  description: "A clean Telegram Mini App starter.",
+};
 
 export default function RootLayout({
   children,
@@ -20,8 +14,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${FontCinzel.className}  antialiased dark`}>
-        <AppProvider>{children}</AppProvider>
+      <body className="antialiased dark">
+        <TelegramProvider>{children}</TelegramProvider>
         <Toaster />
       </body>
     </html>
