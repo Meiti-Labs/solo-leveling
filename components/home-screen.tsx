@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { useLaunchParams } from "@telegram-apps/sdk-react";
 import { ExternalLink } from "lucide-react";
+import HomeHeader  from "@/components/home-header";
 
 export default function HomeScreen() {
   const launchParams = useLaunchParams();
@@ -10,21 +11,9 @@ export default function HomeScreen() {
   const startParam = launchParams.tgWebAppStartParam ?? "none";
 
   return (
-    <main className="mx-auto flex min-h-[calc(100svh-8rem)] w-full max-w-md flex-col justify-between px-5 py-8">
-      <section className="space-y-5">
-        <p className="text-sm uppercase tracking-[0.22em] text-primary/70">
-          Telegram Mini App
-        </p>
-        <div className="space-y-3">
-          <h1 className="text-4xl font-semibold leading-tight">
-            Solo Leveling is ready for a clean rebuild.
-          </h1>
-          <p className="font-sans text-sm leading-6 text-muted-foreground">
-            The old quest stack has been cleared out. This screen keeps the
-            Telegram launch context wired so you can build the next flow on a
-            fresh foundation.
-          </p>
-        </div>
+    <main className="mx-auto flex min-h-[calc(100svh-8rem)] w-full max-w-md flex-col justify-between px-3 py-4">
+      <section className="space-y-2">
+        <HomeHeader />
       </section>
 
       <section className="space-y-3 rounded-lg border border-border/60 bg-card/70 p-4 font-sans text-sm shadow-sm backdrop-blur">

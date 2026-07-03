@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 const navigationItems = [
   {
     href: "/",
-    label: "Home",
+    label: "Profile",
     icon: Compass,
   },
   {
