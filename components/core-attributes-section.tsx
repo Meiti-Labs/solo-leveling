@@ -8,6 +8,7 @@ import {
   Shield,
   Sword,
 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -119,15 +120,15 @@ export default function CoreAttributesSection() {
       <div className="flex items-center justify-between gap-3 px-1">
         <h2 className="text-lg font-medium text-white">Core Attributes</h2>
         <Button
+          asChild
           className="h-auto px-0 text-sm font-medium text-[#4f8cff] hover:text-[#78a8ff]"
-          type="button"
           variant="link"
         >
-          View All
+          <Link href="/attributes">View All</Link>
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-2 min-[410px]:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2">
         {attributes.map((attribute) => (
           <AttributeCard attribute={attribute} key={attribute.name} />
         ))}
