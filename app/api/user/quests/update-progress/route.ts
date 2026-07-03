@@ -4,6 +4,7 @@ import QuestModel, { IQuestModel, ITask } from "@/models/quest.model";
 import UserModel from "@/models/user.model";
 import { updateQuestSchema } from "@/schemas/questSchema";
 import { ApiResponse, ErrorHandler } from "@/utils/ServiceResponse";
+import { xpToLevelFast } from "@/utils/utils";
 import { NextRequest } from "next/server";
 
 export const PUT = async (req: NextRequest) => {
@@ -37,6 +38,10 @@ export const PUT = async (req: NextRequest) => {
     if (isDoneAll) {
       quest.isCompleted = true;
       quest.completedAt = new Date();
+      quest.tasks.forEach((t: ITask) => {
+        quest[t.category].xp += t.xp;
+        quest[t.category].level = xpToLevelFast(quest[t.category].xp );
+      })
     }
 
     await quest.save();
@@ -46,12 +51,20 @@ export const PUT = async (req: NextRequest) => {
         0
       );
 
-      const user = await UserModel.findOneAndUpdate(
-        { telegramId: quest.userTelegramId },
-        { $inc: { totalXP: totalXpGainedFromThisQuest } },
-        { new: true }
-      );
-      if (!user) throw new Error("User not found");
+      if (quest.achievement) {
+        const newUserAchievemnt = {
+          title: quest.achievement.name,
+          description: quest.achievement.description,
+          icon: quest.achievement.icon,
+          date: new Date(),
+        };
+        const user = await UserModel.findOneAndUpdate(
+          { telegramId: quest.userTelegramId },
+          { $inc: { totalXP: totalXpGainedFromThisQuest}, $addToSet: {achievements: newUserAchievemnt} },
+          { new: true }
+        );
+        if (!user) throw new Error("User not found");
+      }
     }
 
     return ApiResponse.success({ messages: ["Progress is updated"] });

@@ -46,6 +46,7 @@ interface ICreateQuestFormProps {
 }
 
 const CreateQuestForm: React.FC<ICreateQuestFormProps> = ({ setOpen }) => {
+  const { user } = userStore();
   const [hasAchievment, setHasAchievement] = React.useState(false);
   const { control, handleSubmit, formState, watch, resetField } = useForm({
     resolver: zodResolver(questSchema),
@@ -56,6 +57,7 @@ const CreateQuestForm: React.FC<ICreateQuestFormProps> = ({ setOpen }) => {
       deadline: "",
       achievement: undefined,
       tasks: [{ title: "", description: "", category: "mind", uuid: uuidv4() }],
+      userTelegramId: user?.telegramId,
     },
   });
 
@@ -65,8 +67,9 @@ const CreateQuestForm: React.FC<ICreateQuestFormProps> = ({ setOpen }) => {
   });
 
   const onSubmit = (data: QuestFormValues) => {
-    ApiService.post("/user/quests", {
+    ApiService.post("/secure/quest/create", {
       ...data,
+      userTelegramId: user?.telegramId,
     }).then((res) => {
       if (res.resultCode == "Ok") {
         setOpen(false);
@@ -170,7 +173,6 @@ const CreateQuestForm: React.FC<ICreateQuestFormProps> = ({ setOpen }) => {
                     category: "mind",
                     totalProgress: 1,
                     uuid: uuidv4(),
-                    xp: 10,
                   })
                 }
               >
@@ -205,18 +207,6 @@ const CreateQuestForm: React.FC<ICreateQuestFormProps> = ({ setOpen }) => {
                     type="number"
                     onChange={(e) => field.onChange(Number(e.target.value))}
                     placeholder="Total Progress"
-                  />
-                )}
-              />
-              <Controller
-                control={control}
-                name={`tasks.${index}.xp`}
-                render={({ field }) => (
-                  <Input
-                    {...field}
-                    type="number"
-                    onChange={(e) => field.onChange(Number(e.target.value))}
-                    placeholder="XP amount"
                   />
                 )}
               />

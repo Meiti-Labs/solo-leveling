@@ -11,12 +11,15 @@ import Footer from "./shared/site-footer";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { Button } from "./ui/button";
+import { IQuest } from "@/models/quest.model";
 
 export type IProgress =
   | "Getting started"
   | "Verifiying Telegram Request"
   | "Verifying ID"
-  | "Get Started";
+  | "Get Started"
+  | "Verification Faild"
+  | "Getting Quests";
 
 export default function AppProvider({
   children,
@@ -25,24 +28,34 @@ export default function AppProvider({
 }) {
   const [progress, setProgress] = useState<IProgress>("Getting started");
   const [ready, setReady] = useState(false);
-  
+
   const data = useLaunchParams();
   const rawInitData = useRawInitData();
 
-
-  const { update } = userStore();
-
+  const { update, updateQuests } = userStore();
 
   useEffect(() => {
     if (data) {
       localStorage.setItem("tma", rawInitData || "");
       setProgress("Verifiying Telegram Request");
-      ApiService.get<IUserData>(`/telegram/user/verify`).then((res) => {
-        setProgress("Verifying ID");
-        if (res.resultCode == "Ok" && res.data) {
-          setProgress("Get Started");
-          update(res.data);
-        }
+      // ApiService.get<IUserData>(`/user/verify`).then((res) => {
+      //   setProgress("Verifying ID");
+      //   if (res.resultCode == "Ok" && res.data) {
+      //     setProgress("Getting Quests");
+      //     update(res.data);
+      //     ApiService.get<IQuest[]>("/user/quests").then()
+      //   } else {
+      //     setProgress("Verification Faild")
+      //   }
+      // });
+
+      Promise.all([
+        ApiService.get<IUserData>(`/user/verify`),
+        ApiService.get<IQuest[]>("/user/quests"),
+      ]).then((results) => {
+        if (results[0].data) update(results[0].data);
+
+        if (results[1].data) updateQuests(results[1].data);
       });
     }
   }, []);

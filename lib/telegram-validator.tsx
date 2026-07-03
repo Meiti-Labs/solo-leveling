@@ -7,7 +7,7 @@ export default function VerifyTelegramRequest(
 ): TelegramUser | null {
   const initData =
     request.headers.get("authorization")?.replace(/^tma\s+/i, "") || "";
-  validate(initData, process.env.TELEGRAM_BOT_TOKEN!);
+  // validate(initData, process.env.TELEGRAM_BOT_TOKEN!);
   const params = new URLSearchParams(initData);
   const userRaw = params.get("user");
   const user = userRaw ? JSON.parse(userRaw) : null;
