@@ -63,7 +63,7 @@ export default function LevelProgressCard() {
             <h2 className="truncate text-base font-medium text-slate-200 sm:text-lg">
               XP Progress
             </h2>
-            <span className="shrink-0 text-lg font-semibold text-white sm:text-xl">
+            <span className="shrink-0 text-lg  text-white sm:text-xl">
               {percent}%
             </span>
           </div>
