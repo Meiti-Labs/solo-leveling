@@ -6,6 +6,7 @@ import { ExternalLink } from "lucide-react";
 import HomeHeader  from "@/components/home-header";
 import LevelProgressCard from "@/components/level-progress-card";
 import CoreAttributesSection from "@/components/core-attributes-section";
+import TodayOverviewSection from "@/components/today-overview-section";
 
 export default function HomeScreen() {
   const launchParams = useLaunchParams();
@@ -20,6 +21,7 @@ export default function HomeScreen() {
       </section>
 
       <CoreAttributesSection />
+      <TodayOverviewSection />
 
       <section className="space-y-3 rounded-lg border border-border/60 bg-card/70 p-4 font-sans text-sm shadow-sm backdrop-blur">
         <div className="flex items-center justify-between gap-4">
