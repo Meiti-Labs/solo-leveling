@@ -18,6 +18,7 @@ type Quest = {
   id: string;
   title: string;
   attribute: string;
+  description?: string;
   difficulty: QuestDifficulty;
   xpReward: number;
   completed: boolean;
@@ -31,8 +32,9 @@ const bossQuestTemplate: Quest = {
   id: "inner-procrastination",
   title: "Inner Procrastination",
   attribute: "Boss Quest",
+  description: "Defeat the boss that holds you back.",
   difficulty: "Boss",
-  xpReward: 1200,
+  xpReward: 2000,
   completed: false,
   type: "boss",
   tone: "boss",
@@ -190,37 +192,50 @@ function NormalQuestCard({ quest }: { quest: Quest }) {
 }
 
 function BossQuestCard({ quest }: { quest: Quest }) {
-  const Icon = quest.icon;
-  const styles = toneStyles[quest.tone];
-
   return (
-    <article className="relative grid grid-cols-[4.25rem_minmax(0,1fr)_auto] items-center gap-3 overflow-hidden rounded-xl border border-fuchsia-500/30 bg-[#07111f] p-3 font-sans shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(217,70,239,0.1)]">
+    <article className="relative min-h-28 overflow-hidden rounded-xl border border-violet-500/70 bg-[#07111f] p-4 font-sans shadow-[0_0_26px_rgba(124,58,237,0.22),inset_0_1px_20px_rgba(168,85,247,0.12)]">
       <div
-        className="absolute inset-0 bg-cover bg-center opacity-50"
+        className="absolute inset-0 bg-cover bg-center opacity-80"
         style={{ backgroundImage: `url(${quest.bossBackground})` }}
       />
-      <div className="absolute inset-0 bg-gradient-to-r from-[#080816]/90 via-[#120929]/75 to-[#070b16]/90" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#070713]/95 via-[#16092d]/72 to-[#150726]/35" />
+      <div className="absolute inset-y-0 left-0 w-2/3 bg-gradient-to-r from-[#070713] via-[#070713]/75 to-transparent" />
 
-      <div className="relative">
-        <QuestIconBadge styles={styles}>
-          <Icon className={cn("size-6 stroke-[2.3]", styles.icon)} />
-        </QuestIconBadge>
-      </div>
+      <div className="relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+        <div className="min-w-0 space-y-2">
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-violet-400">
+              {quest.attribute}
+            </p>
+            <h2 className="truncate text-xl font-semibold leading-tight text-white">
+              {quest.title}
+            </h2>
+            <p className="truncate text-sm text-slate-300">
+              {quest.description}
+            </p>
+          </div>
 
-      <div className="relative min-w-0 space-y-1">
-        <h2 className="truncate text-base font-medium leading-tight text-white">
-          {quest.title}
-        </h2>
-        <p className="truncate text-sm text-fuchsia-200/80">{quest.attribute}</p>
-        <div className="flex items-center gap-1.5 text-sm">
-          <span className={cn("size-2 rounded-full", styles.dot)} />
-          <span className={styles.text}>{quest.difficulty}</span>
+          <div className="flex items-center justify-between gap-3 pr-1">
+            <div className="flex items-center gap-1.5 text-sm">
+              <span className="size-2.5 rounded-full bg-rose-500" />
+              <span className="text-rose-400">Hard</span>
+            </div>
+            <p className="whitespace-nowrap text-base font-semibold text-violet-400">
+              +{formatXp(quest.xpReward)} XP
+            </p>
+          </div>
         </div>
-      </div>
 
-      <p className="relative whitespace-nowrap text-base font-medium text-white">
-        +{formatXp(quest.xpReward)} <span className="text-[#d946ef]">XP</span>
-      </p>
+        <Button
+          aria-label={quest.completed ? "Boss quest completed" : "Complete boss quest"}
+          className="size-11 rounded-full border border-violet-500/80 bg-violet-950/35 text-violet-300 shadow-[0_0_18px_rgba(168,85,247,0.45)] hover:bg-violet-950/50"
+          size="icon"
+          type="button"
+          variant="ghost"
+        >
+          <Check className="size-6" />
+        </Button>
+      </div>
     </article>
   );
 }
