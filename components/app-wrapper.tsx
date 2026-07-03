@@ -2,6 +2,7 @@
 
 import { useRawInitData } from "@telegram-apps/sdk-react";
 import { useEffect } from "react";
+import BottomNavigation from "@/components/bottom-navigation";
 
 export default function AppProvider({
   children,
@@ -17,6 +18,9 @@ export default function AppProvider({
   }, [rawInitData]);
 
   return (
-    <div className="min-h-svh bg-background text-foreground">{children}</div>
+    <div className="min-h-svh bg-background pb-28 text-foreground">
+      {children}
+      <BottomNavigation />
+    </div>
   );
 }

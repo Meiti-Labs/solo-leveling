@@ -10,7 +10,7 @@ export default function HomeScreen() {
   const startParam = launchParams.tgWebAppStartParam ?? "none";
 
   return (
-    <main className="mx-auto flex min-h-[calc(100svh-5rem)] w-full max-w-md flex-col justify-between px-5 py-8">
+    <main className="mx-auto flex min-h-[calc(100svh-8rem)] w-full max-w-md flex-col justify-between px-5 py-8">
       <section className="space-y-5">
         <p className="text-sm uppercase tracking-[0.22em] text-primary/70">
           Telegram Mini App
