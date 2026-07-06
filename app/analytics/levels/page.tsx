@@ -159,9 +159,6 @@ function MilestoneMarker({ milestone }: { milestone: LevelMilestone }) {
     milestone.level % 10 === 0 ||
     milestone.level === 1 ||
     milestone.level === MAX_ROADMAP_LEVEL;
-  const isMedium = milestone.level % 5 === 0;
-
-  
 
   return (
     <div
