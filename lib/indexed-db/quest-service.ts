@@ -1,33 +1,28 @@
 import { db } from "./database";
 import { createCrudService } from "./crud-service";
-import type { CreateEntity, Quest } from "./types";
+import type { CreateEntity, TaskDefinition, TaskKind } from "./types";
 
-const questCrud = createCrudService<Quest>(db.quests);
+const taskCrud = createCrudService<TaskDefinition>(db.tasks);
 
 export const questService = {
-  ...questCrud,
+  ...taskCrud,
 
-  async createQuest(input: CreateEntity<Quest>): Promise<Quest> {
-    return questCrud.create({
+  async createQuest(input: CreateEntity<TaskDefinition>): Promise<TaskDefinition> {
+    return taskCrud.create({
       ...input,
-      status: input.status ?? "todo",
-      xpReward: input.xpReward ?? 0,
-      isDaily: input.isDaily ?? false,
+      status: input.status ?? "active",
+      coinReward: input.coinReward ?? 0,
+      gemReward: input.gemReward ?? 0,
+      missedPenaltyXp: input.missedPenaltyXp ?? Math.round(input.xpReward * 0.3),
+      isDefault: input.isDefault ?? false,
     });
   },
 
-  async listDaily(): Promise<Quest[]> {
-    return db.quests.where("isDaily").equals(1).reverse().sortBy("updatedAt");
+  async listByKind(kind: TaskKind): Promise<TaskDefinition[]> {
+    return db.tasks.where("kind").equals(kind).reverse().sortBy("updatedAt");
   },
 
-  async listByStatus(status: Quest["status"]): Promise<Quest[]> {
-    return db.quests.where("status").equals(status).reverse().sortBy("updatedAt");
-  },
-
-  async complete(id: string): Promise<Quest> {
-    return questCrud.update(id, {
-      status: "completed",
-      completedAt: new Date().toISOString(),
-    });
+  async listActive(): Promise<TaskDefinition[]> {
+    return db.tasks.where("status").equals("active").toArray();
   },
 };

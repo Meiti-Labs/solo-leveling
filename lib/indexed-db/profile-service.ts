@@ -18,7 +18,7 @@ export const profileService = {
 
     return profileCrud.upsert({
       ...input,
-      id: input.id ?? existing?.id,
+      id: input.id ?? existing?.id ?? `profile-${input.telegramId}`,
     });
   },
 };

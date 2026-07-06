@@ -1,4 +1,5 @@
 export type EntityId = string;
+export type AppDate = string;
 
 export type TimestampedEntity = {
   id: EntityId;
@@ -6,25 +7,188 @@ export type TimestampedEntity = {
   updatedAt: string;
 };
 
+export const ATTRIBUTE_KEYS = [
+  "strength",
+  "intelligence",
+  "discipline",
+  "finance",
+  "wisdom",
+  "communication",
+] as const;
+
+export type AttributeKey = (typeof ATTRIBUTE_KEYS)[number];
+
 export type UserProfile = TimestampedEntity & {
   telegramId?: number;
+  chatId?: number;
   firstName?: string;
   lastName?: string;
   username?: string;
   photoUrl?: string;
-  level: number;
+  languageCode?: string;
+};
+
+export type UserProgress = TimestampedEntity & {
+  profileId: EntityId;
+  overallXp: number;
+  coins: number;
+  gems: number;
+  currentStreak: number;
+  longestStreak: number;
+  lastCompletedDate?: AppDate;
+  weeklyOffDay: number;
+  yearStartedOn: AppDate;
+  lostXpCount: number;
+};
+
+export type AttributeProgress = TimestampedEntity & {
+  key: AttributeKey;
+  label: string;
   xp: number;
 };
 
-export type QuestStatus = "todo" | "active" | "completed" | "archived";
+export type TaskKind = "daily" | "goal" | "boss";
+export type TaskStatus = "active" | "completed" | "failed" | "archived";
+export type TaskDifficulty = "easy" | "medium" | "hard" | "boss";
 
-export type Quest = TimestampedEntity & {
+export type TaskAttributeWeight = {
+  key: AttributeKey;
+  weight: number;
+};
+
+export type TaskDefinition = TimestampedEntity & {
   title: string;
   description?: string;
-  status: QuestStatus;
+  kind: TaskKind;
+  status: TaskStatus;
+  difficulty: TaskDifficulty;
+  attributes: TaskAttributeWeight[];
   xpReward: number;
-  isDaily: boolean;
-  completedAt?: string;
+  coinReward: number;
+  gemReward: number;
+  deadline?: AppDate;
+  missedPenaltyXp: number;
+  streakBonusEvery?: number;
+  streakBonusXp?: number;
+  isDefault: boolean;
+};
+
+export type AttributeXpGrant = {
+  key: AttributeKey;
+  xp: number;
+};
+
+export type TaskCompletion = TimestampedEntity & {
+  taskId: EntityId;
+  taskKind: TaskKind;
+  completedForDate: AppDate;
+  completedAt: string;
+  earnedXp: number;
+  earnedCoins: number;
+  earnedGems: number;
+  attributeXp: AttributeXpGrant[];
+  streakAfter?: number;
+  offDayMultiplier: number;
+};
+
+export type Currency = "coins" | "gems";
+export type RewardKind = "physical" | "experience" | "digital" | "custom";
+
+export type StoreReward = TimestampedEntity & {
+  title: string;
+  description?: string;
+  kind: RewardKind;
+  cost: number;
+  currency: Currency;
+  isDefault: boolean;
+  isArchived: boolean;
+};
+
+export type RewardPurchase = TimestampedEntity & {
+  rewardId: EntityId;
+  title: string;
+  cost: number;
+  currency: Currency;
+  purchasedAt: string;
+  redeemedAt?: string;
+};
+
+export type WalletTransaction = TimestampedEntity & {
+  currency: Currency;
+  amount: number;
+  reason: string;
+  sourceType:
+    | "task-completion"
+    | "reward-purchase"
+    | "achievement"
+    | "manual-adjustment";
+  sourceId?: EntityId;
+  occurredAt: string;
+};
+
+export type AchievementMetric =
+  | "overall-level"
+  | "bosses-completed"
+  | "current-streak"
+  | "tasks-completed"
+  | "coins-earned"
+  | "no-xp-loss-year";
+
+export type AchievementCategory =
+  | "medal"
+  | "achievement"
+  | "boss-trophy"
+  | "title";
+
+export type AchievementDefinition = TimestampedEntity & {
+  key: string;
+  title: string;
+  description: string;
+  category: AchievementCategory;
+  metric: AchievementMetric;
+  target: number;
+  medalImage?: string;
+  coinReward: number;
+  gemReward: number;
+  isDefault: boolean;
+};
+
+export type AchievementUnlock = TimestampedEntity & {
+  achievementKey: string;
+  unlockedAt: string;
+};
+
+export type ActivityEvent = TimestampedEntity & {
+  type:
+    | "task-completed"
+    | "daily-missed"
+    | "boss-failed"
+    | "reward-purchased"
+    | "reward-redeemed"
+    | "achievement-unlocked"
+    | "level-up";
+  title: string;
+  description?: string;
+  occurredAt: string;
+  xpDelta?: number;
+  coinDelta?: number;
+  gemDelta?: number;
+  metadata?: Record<string, unknown>;
+};
+
+export type NotificationType =
+  | "achievement"
+  | "badge"
+  | "boss"
+  | "level-up";
+
+export type AppNotification = TimestampedEntity & {
+  type: NotificationType;
+  title: string;
+  description?: string;
+  occurredAt: string;
+  readAt?: string;
+  metadata?: Record<string, unknown>;
 };
 
 export type AppSetting<TValue = unknown> = {
