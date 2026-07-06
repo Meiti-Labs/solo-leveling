@@ -25,7 +25,7 @@ export default function PageHeader({
   return (
     <header className="space-y-4 pt-2">
       <div className="flex items-start justify-between gap-4">
-        <h1 className="text-4xl font-semibold leading-none tracking-[-0.03em] text-white">
+        <h1 className="text-3xl font-semibold leading-none tracking-[-0.03em] text-white">
           {title}
         </h1>
 

@@ -325,7 +325,7 @@ export default function CreateQuestPage() {
 
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-[#3d87ff]">New Quest</p>
-          <h1 className="truncate text-3xl font-semibold leading-none tracking-[-0.03em] text-white">
+          <h1 className="truncate text-2xl font-semibold leading-none tracking-[-0.03em] text-white">
             Create Quest
           </h1>
         </div>

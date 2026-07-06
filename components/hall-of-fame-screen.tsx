@@ -96,7 +96,7 @@ function HeroSection() {
       <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background to-transparent" />
 
       <div className="relative space-y-3">
-        <h1 className="text-4xl font-semibold leading-none tracking-[-0.03em] text-white">
+        <h1 className="text-3xl font-semibold leading-none tracking-[-0.03em] text-white">
           Hall of Fame
         </h1>
         <div className="h-px w-36 bg-gradient-to-r from-[#2f80ff] via-[#6fb6ff] to-transparent shadow-[0_0_12px_rgba(47,128,255,0.9)]" />

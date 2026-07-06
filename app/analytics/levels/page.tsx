@@ -135,7 +135,7 @@ function RoadmapHeader() {
         <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#5aa0ff]">
           Analytics
         </p>
-        <h1 className="truncate text-3xl font-semibold leading-none tracking-[-0.03em] text-white">
+        <h1 className="truncate text-2xl font-semibold leading-none tracking-[-0.03em] text-white">
           Level Roadmap
         </h1>
       </div>
