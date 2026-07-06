@@ -1,50 +1,55 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { useLaunchParams } from "@telegram-apps/sdk-react";
-import { ExternalLink } from "lucide-react";
 import HomeHeader  from "@/components/home-header";
 import LevelProgressCard from "@/components/level-progress-card";
 import CoreAttributesSection from "@/components/core-attributes-section";
 import TodayOverviewSection from "@/components/today-overview-section";
 import RecentActivitySection from "@/components/recent-activity-section";
+import { useGameSnapshot } from "@/hooks/use-game-snapshot";
 
 export default function HomeScreen() {
-  const launchParams = useLaunchParams();
-  const platform = launchParams.tgWebAppPlatform ?? "unknown";
-  const startParam = launchParams.tgWebAppStartParam ?? "none";
+  const { error, isLoading, snapshot } = useGameSnapshot();
+
+  if (isLoading) {
+    return (
+      <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <div
+            className="h-28 animate-pulse rounded-2xl border border-slate-800/80 bg-[#07111f]/70"
+            key={index}
+          />
+        ))}
+      </main>
+    );
+  }
+
+  if (error || !snapshot) {
+    return (
+      <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md px-3 py-4">
+        <section className="rounded-xl border border-rose-500/50 bg-rose-950/20 p-4 text-sm text-rose-100">
+          Could not load your local progress. {error?.message}
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
       <section className="space-y-2">
-        <HomeHeader />
-        <LevelProgressCard />
+        <HomeHeader
+          level={snapshot.overallLevel.level}
+          profile={snapshot.profile}
+          unreadNotifications={
+            snapshot.notifications.filter((notification) => !notification.readAt)
+              .length
+          }
+        />
+        <LevelProgressCard progress={snapshot.overallLevel} />
       </section>
 
-      <CoreAttributesSection />
-      <TodayOverviewSection />
-      <RecentActivitySection />
-
-      <section className="space-y-3 rounded-lg border border-border/60 bg-card/70 p-4 font-sans text-sm shadow-sm backdrop-blur">
-        <div className="flex items-center justify-between gap-4">
-          <span className="text-muted-foreground">Platform</span>
-          <span className="font-medium">{platform}</span>
-        </div>
-        <div className="flex items-center justify-between gap-4">
-          <span className="text-muted-foreground">Start param</span>
-          <span className="max-w-40 truncate font-medium">{startParam}</span>
-        </div>
-        <Button className="mt-2 w-full" asChild>
-          <a
-            href="https://docs.telegram-mini-apps.com/"
-            rel="noreferrer"
-            target="_blank"
-          >
-            Telegram Mini Apps docs
-            <ExternalLink />
-          </a>
-        </Button>
-      </section>
+      <CoreAttributesSection attributes={snapshot.attributes} />
+      <TodayOverviewSection snapshot={snapshot} />
+      <RecentActivitySection activities={snapshot.activityEvents} />
     </main>
   );
 }

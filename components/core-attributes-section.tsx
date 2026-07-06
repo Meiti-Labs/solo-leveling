@@ -9,68 +9,58 @@ import {
   Sword,
 } from "lucide-react";
 import Link from "next/link";
+import type { ComponentType } from "react";
 import { Button } from "@/components/ui/button";
+import type { LevelProgress } from "@/lib/game/leveling";
+import type { AttributeKey, AttributeProgress } from "@/lib/indexed-db/types";
+import { ATTRIBUTE_KEYS } from "@/lib/indexed-db/types";
 import { cn } from "@/lib/utils";
 
 type Attribute = {
-  name: string;
-  level: number;
-  currentXp: number;
-  nextXp: number;
+  key: AttributeKey;
+  label: string;
+  progress: LevelProgress;
   color: "purple" | "blue" | "green" | "gold" | "cyan" | "pink";
-  icon: React.ComponentType<{ className?: string }>;
+  icon: ComponentType<{ className?: string }>;
 };
 
-const attributes: Attribute[] = [
-  {
-    name: "Strength",
-    level: 28,
-    currentXp: 2450,
-    nextXp: 3500,
+type AttributeWithLevel = AttributeProgress & { level: LevelProgress };
+
+const attributeVisuals: Record<
+  AttributeKey,
+  Pick<Attribute, "color" | "icon" | "label">
+> = {
+  strength: {
+    label: "Strength",
     color: "purple",
     icon: Sword,
   },
-  {
-    name: "Intelligence",
-    level: 26,
-    currentXp: 2100,
-    nextXp: 3000,
+  intelligence: {
+    label: "Intelligence",
     color: "blue",
     icon: BookOpen,
   },
-  {
-    name: "Discipline",
-    level: 29,
-    currentXp: 2800,
-    nextXp: 3800,
+  discipline: {
+    label: "Discipline",
     color: "green",
     icon: Shield,
   },
-  {
-    name: "Finance",
-    level: 24,
-    currentXp: 1900,
-    nextXp: 2800,
+  finance: {
+    label: "Finance",
     color: "gold",
     icon: Coins,
   },
-  {
-    name: "Wisdom",
-    level: 27,
-    currentXp: 2200,
-    nextXp: 3200,
+  wisdom: {
+    label: "Wisdom",
     color: "cyan",
     icon: Flame,
   },
-  {
-    name: "Communication",
-    level: 23,
-    currentXp: 1600,
-    nextXp: 2500,
+  communication: {
+    label: "Communication",
     color: "pink",
     icon: MessageSquare,
   },
-];
+};
 
 const colorStyles: Record<
   Attribute["color"],
@@ -114,7 +104,28 @@ const colorStyles: Record<
 
 const formatXp = (xp: number) => new Intl.NumberFormat("en-US").format(xp);
 
-export default function CoreAttributesSection() {
+export default function CoreAttributesSection({
+  attributes,
+}: {
+  attributes: AttributeWithLevel[];
+}) {
+  const cards = ATTRIBUTE_KEYS.map((key) => {
+    const attribute = attributes.find((item) => item.key === key);
+    const visual = attributeVisuals[key];
+
+    if (!attribute) {
+      return null;
+    }
+
+    return {
+      key,
+      label: attribute.label || visual.label,
+      progress: attribute.level,
+      color: visual.color,
+      icon: visual.icon,
+    } satisfies Attribute;
+  }).filter(Boolean) as Attribute[];
+
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3 px-1">
@@ -129,8 +140,8 @@ export default function CoreAttributesSection() {
       </div>
 
       <div className="grid grid-cols-1 gap-2">
-        {attributes.map((attribute) => (
-          <AttributeCard attribute={attribute} key={attribute.name} />
+        {cards.map((attribute) => (
+          <AttributeCard attribute={attribute} key={attribute.key} />
         ))}
       </div>
     </section>
@@ -139,11 +150,9 @@ export default function CoreAttributesSection() {
 
 function AttributeCard({ attribute }: { attribute: Attribute }) {
   const Icon = attribute.icon;
-  const percent = Math.min(
-    100,
-    Math.round((attribute.currentXp / attribute.nextXp) * 100),
-  );
+  const percent = attribute.progress.progressPercent;
   const styles = colorStyles[attribute.color];
+  const isLegendary = attribute.progress.level >= 100;
 
   return (
     <article className="grid grid-cols-[3.25rem_minmax(0,1fr)] items-center gap-3 rounded-xl border border-slate-700/55 bg-[#07111f]/82 p-3 shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(99,148,216,0.06)] backdrop-blur-xl">
@@ -163,10 +172,10 @@ function AttributeCard({ attribute }: { attribute: Attribute }) {
       <div className="min-w-0 space-y-2 font-sans">
         <div className="flex items-baseline justify-between gap-2">
           <h3 className="truncate text-base font-medium leading-none text-white">
-            {attribute.name}
+            {attribute.label}
           </h3>
           <span className="shrink-0 text-sm text-slate-300">
-            Lv. <span className="text-white">{attribute.level}</span>
+            Lv. <span className="text-white">{attribute.progress.level}</span>
           </span>
         </div>
 
@@ -178,7 +187,11 @@ function AttributeCard({ attribute }: { attribute: Attribute }) {
         </div>
 
         <p className="truncate text-sm text-slate-400">
-          {formatXp(attribute.currentXp)} / {formatXp(attribute.nextXp)} XP
+          {isLegendary
+            ? `${formatXp(attribute.progress.totalXp)} total XP`
+            : `${formatXp(attribute.progress.xpIntoLevel)} / ${formatXp(
+                attribute.progress.xpForNextLevel,
+              )} XP`}
         </p>
       </div>
     </article>

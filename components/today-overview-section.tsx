@@ -1,6 +1,9 @@
 "use client";
 
 import { BadgeDollarSign, ClipboardList, Flame, Sparkles } from "lucide-react";
+import type { ComponentType } from "react";
+import type { GameSnapshot } from "@/hooks/use-game-snapshot";
+import { isOffDay, toAppDate } from "@/lib/game/date";
 import { cn } from "@/lib/utils";
 
 type OverviewStat = {
@@ -8,39 +11,8 @@ type OverviewStat = {
   value: string;
   helper: string;
   tone: "blue" | "amber" | "purple" | "gold";
-  icon: React.ComponentType<{ className?: string }>;
+  icon: ComponentType<{ className?: string }>;
 };
-
-const overviewStats: OverviewStat[] = [
-  {
-    label: "Today's XP",
-    value: "1,250",
-    helper: "+18%",
-    tone: "blue",
-    icon: Sparkles,
-  },
-  {
-    label: "Current Streak",
-    value: "12",
-    helper: "days",
-    tone: "amber",
-    icon: Flame,
-  },
-  {
-    label: "Active Quests",
-    value: "4",
-    helper: "ongoing",
-    tone: "purple",
-    icon: ClipboardList,
-  },
-  {
-    label: "Money Saved",
-    value: "$145",
-    helper: "today",
-    tone: "gold",
-    icon: BadgeDollarSign,
-  },
-];
 
 const toneStyles: Record<
   OverviewStat["tone"],
@@ -72,7 +44,59 @@ const toneStyles: Record<
   },
 };
 
-export default function TodayOverviewSection() {
+const formatNumber = (value: number) =>
+  new Intl.NumberFormat("en-US").format(value);
+
+export default function TodayOverviewSection({
+  snapshot,
+}: {
+  snapshot: GameSnapshot;
+}) {
+  const today = toAppDate();
+  const todaysCompletions = snapshot.taskCompletions.filter(
+    (completion) => completion.completedForDate === today,
+  );
+  const todaysXp = todaysCompletions.reduce(
+    (total, completion) => total + completion.earnedXp,
+    0,
+  );
+  const activeTasks = snapshot.tasks.filter((task) => task.status === "active");
+  const activeDailyTasks = activeTasks.filter((task) => task.kind === "daily");
+  const completedDailyTasks = todaysCompletions.filter(
+    (completion) => completion.taskKind === "daily",
+  ).length;
+  const offDay = isOffDay(today, snapshot.progress.weeklyOffDay);
+  const overviewStats: OverviewStat[] = [
+    {
+      label: "Today's XP",
+      value: formatNumber(todaysXp),
+      helper: offDay ? "2x off day" : `${completedDailyTasks}/${activeDailyTasks.length} daily`,
+      tone: "blue",
+      icon: Sparkles,
+    },
+    {
+      label: "Current Streak",
+      value: formatNumber(snapshot.progress.currentStreak),
+      helper: "days",
+      tone: "amber",
+      icon: Flame,
+    },
+    {
+      label: "Active Quests",
+      value: formatNumber(activeTasks.length),
+      helper: "ongoing",
+      tone: "purple",
+      icon: ClipboardList,
+    },
+    {
+      label: "Coins",
+      value: formatNumber(snapshot.progress.coins),
+      helper: `${formatNumber(snapshot.progress.gems)} gems`,
+      tone: "gold",
+      icon: BadgeDollarSign,
+    },
+  ];
+
   return (
     <section className="space-y-3">
       <h2 className="px-1 text-lg font-medium text-white">Today&apos;s Overview</h2>
