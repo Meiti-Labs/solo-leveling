@@ -12,9 +12,12 @@ export type {
   AppDate,
   AppNotification,
   AppSetting,
+  AttributeColorScheme,
+  AttributeIconKey,
   AttributeKey,
   AttributeProgress,
   AttributeXpGrant,
+  CoreAttributeKey,
   CreateEntity,
   Currency,
   EntityId,
@@ -33,4 +36,11 @@ export type {
   UserProfile,
   UserProgress,
 } from "./types";
-export { ATTRIBUTE_KEYS } from "./types";
+export {
+  ATTRIBUTE_COLOR_SCHEMES,
+  ATTRIBUTE_ICON_KEYS,
+  ATTRIBUTE_KEYS,
+  isAttributeColorScheme,
+  isAttributeIconKey,
+  isCoreAttributeKey,
+} from "./types";

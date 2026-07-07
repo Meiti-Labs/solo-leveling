@@ -1,16 +1,21 @@
 import { db } from "@/lib/indexed-db/database";
-import type {
-  ActivityEvent,
-  AppNotification,
-  AppDate,
-  AttributeProgress,
-  AttributeXpGrant,
-  CreateEntity,
-  StoreReward,
-  TaskCompletion,
-  TaskDefinition,
-  UserProfile,
-  UserProgress,
+import {
+  isAttributeColorScheme,
+  isAttributeIconKey,
+  isCoreAttributeKey,
+  type ActivityEvent,
+  type AppNotification,
+  type AppDate,
+  type AttributeColorScheme,
+  type AttributeIconKey,
+  type AttributeProgress,
+  type AttributeXpGrant,
+  type CreateEntity,
+  type StoreReward,
+  type TaskCompletion,
+  type TaskDefinition,
+  type UserProfile,
+  type UserProgress,
 } from "@/lib/indexed-db/types";
 import { fromAppDate, getPreviousAppDate, isOffDay, toAppDate } from "./date";
 import { getLevelProgress } from "./leveling";
@@ -43,6 +48,56 @@ type CompletionResult = {
 
 const createId = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
+
+function normalizeAttributeLabel(label: string) {
+  return label.trim().replace(/\s+/g, " ");
+}
+
+function slugifyAttributeLabel(label: string) {
+  return (
+    normalizeAttributeLabel(label)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 34) || "attribute"
+  );
+}
+
+async function findAttributeByLabel(label: string, ignoredId?: string) {
+  const normalizedLabel = normalizeAttributeLabel(label).toLowerCase();
+  const attributes = await db.attributeProgress.toArray();
+
+  return attributes.find(
+    (attribute) =>
+      attribute.id !== ignoredId &&
+      normalizeAttributeLabel(attribute.label).toLowerCase() === normalizedLabel,
+  );
+}
+
+async function createUniqueAttributeKey(label: string) {
+  const baseKey = `custom-${slugifyAttributeLabel(label)}`;
+  let key = baseKey;
+  let index = 2;
+
+  while (await db.attributeProgress.where("key").equals(key).first()) {
+    key = `${baseKey}-${index}`;
+    index += 1;
+  }
+
+  return key;
+}
+
+function normalizeAttributeColorScheme(
+  colorScheme?: string,
+): AttributeColorScheme {
+  return colorScheme && isAttributeColorScheme(colorScheme)
+    ? colorScheme
+    : "blue";
+}
+
+function normalizeAttributeIcon(icon?: string): AttributeIconKey {
+  return icon && isAttributeIconKey(icon) ? icon : "sparkles";
+}
 
 async function getProfileId(identity?: TelegramIdentity): Promise<string> {
   if (identity?.id) {
@@ -458,6 +513,88 @@ export const gameService = {
 
     await db.tasks.add(task);
     return task;
+  },
+
+  async createAttribute(input: {
+    colorScheme?: string;
+    icon?: string;
+    label: string;
+  }): Promise<AttributeProgress> {
+    await this.initialize();
+
+    const label = normalizeAttributeLabel(input.label);
+
+    if (!label) {
+      throw new Error("Attribute name is required.");
+    }
+
+    if (await findAttributeByLabel(label)) {
+      throw new Error("An attribute with this name already exists.");
+    }
+
+    const timestamp = now();
+    const attribute: AttributeProgress = {
+      id: createId(),
+      key: await createUniqueAttributeKey(label),
+      label,
+      xp: 0,
+      isDefault: false,
+      colorScheme: normalizeAttributeColorScheme(input.colorScheme),
+      icon: normalizeAttributeIcon(input.icon),
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+
+    await db.attributeProgress.add(attribute);
+    return attribute;
+  },
+
+  async updateAttribute(
+    attributeId: string,
+    input: { colorScheme?: string; icon?: string; label: string },
+  ): Promise<AttributeProgress> {
+    await this.initialize();
+
+    const attribute = await db.attributeProgress.get(attributeId);
+
+    if (!attribute) {
+      throw new Error(`Attribute was not found: ${attributeId}`);
+    }
+
+    if (attribute.isDefault || isCoreAttributeKey(attribute.key)) {
+      throw new Error("Default attributes cannot be renamed.");
+    }
+
+    const label = normalizeAttributeLabel(input.label);
+
+    if (!label) {
+      throw new Error("Attribute name is required.");
+    }
+
+    if (await findAttributeByLabel(label, attribute.id)) {
+      throw new Error("An attribute with this name already exists.");
+    }
+
+    const timestamp = now();
+    const colorScheme = normalizeAttributeColorScheme(
+      input.colorScheme ?? attribute.colorScheme,
+    );
+    const icon = normalizeAttributeIcon(input.icon ?? attribute.icon);
+
+    await db.attributeProgress.update(attribute.id, {
+      colorScheme,
+      icon,
+      label,
+      updatedAt: timestamp,
+    });
+
+    return {
+      ...attribute,
+      colorScheme,
+      icon,
+      label,
+      updatedAt: timestamp,
+    };
   },
 
   async archiveTask(taskId: string): Promise<void> {

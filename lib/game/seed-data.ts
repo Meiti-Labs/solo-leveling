@@ -8,23 +8,64 @@ import type {
 const now = () => new Date().toISOString();
 
 export const defaultAttributes: Array<
-  Pick<AttributeProgress, "id" | "key" | "label" | "xp">
+  Pick<
+    AttributeProgress,
+    "colorScheme" | "icon" | "id" | "isDefault" | "key" | "label" | "xp"
+  >
 > = [
-  { id: "attribute-strength", key: "strength", label: "Strength", xp: 0 },
+  {
+    id: "attribute-strength",
+    key: "strength",
+    label: "Strength",
+    xp: 0,
+    isDefault: true,
+    colorScheme: "purple",
+    icon: "sword",
+  },
   {
     id: "attribute-intelligence",
     key: "intelligence",
     label: "Intelligence",
     xp: 0,
+    isDefault: true,
+    colorScheme: "blue",
+    icon: "book-open",
   },
-  { id: "attribute-discipline", key: "discipline", label: "Discipline", xp: 0 },
-  { id: "attribute-finance", key: "finance", label: "Finance", xp: 0 },
-  { id: "attribute-wisdom", key: "wisdom", label: "Wisdom", xp: 0 },
+  {
+    id: "attribute-discipline",
+    key: "discipline",
+    label: "Discipline",
+    xp: 0,
+    isDefault: true,
+    colorScheme: "green",
+    icon: "shield",
+  },
+  {
+    id: "attribute-finance",
+    key: "finance",
+    label: "Finance",
+    xp: 0,
+    isDefault: true,
+    colorScheme: "gold",
+    icon: "coins",
+  },
+  {
+    id: "attribute-wisdom",
+    key: "wisdom",
+    label: "Wisdom",
+    xp: 0,
+    isDefault: true,
+    colorScheme: "cyan",
+    icon: "flame",
+  },
   {
     id: "attribute-communication",
     key: "communication",
     label: "Communication",
     xp: 0,
+    isDefault: true,
+    colorScheme: "pink",
+    icon: "message-square",
   },
 ];
 

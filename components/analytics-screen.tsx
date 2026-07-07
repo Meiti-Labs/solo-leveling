@@ -14,7 +14,7 @@ import {
 import PageHeader from "@/components/page-header";
 import type { GameSnapshot } from "@/hooks/use-game-snapshot";
 import { useGameSnapshot } from "@/hooks/use-game-snapshot";
-import type { AttributeKey } from "@/lib/indexed-db/types";
+import type { CoreAttributeKey } from "@/lib/indexed-db/types";
 
 type Period = "Daily" | "Weekly" | "Monthly" | "Yearly" | "Lifetime";
 
@@ -37,7 +37,7 @@ type RadarPoint = {
 
 const periods: Period[] = ["Daily", "Weekly", "Monthly", "Yearly", "Lifetime"];
 
-const attributeOrder: AttributeKey[] = [
+const attributeOrder: CoreAttributeKey[] = [
   "strength",
   "intelligence",
   "discipline",

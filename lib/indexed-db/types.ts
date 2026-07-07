@@ -16,7 +16,78 @@ export const ATTRIBUTE_KEYS = [
   "communication",
 ] as const;
 
-export type AttributeKey = (typeof ATTRIBUTE_KEYS)[number];
+export const ATTRIBUTE_COLOR_SCHEMES = [
+  "purple",
+  "blue",
+  "green",
+  "gold",
+  "cyan",
+  "pink",
+  "red",
+  "indigo",
+] as const;
+
+export const ATTRIBUTE_ICON_KEYS = [
+  "activity",
+  "alarm-clock",
+  "award",
+  "bike",
+  "book-open",
+  "brain",
+  "briefcase",
+  "calendar-check",
+  "camera",
+  "code-2",
+  "coffee",
+  "coins",
+  "compass",
+  "crown",
+  "dumbbell",
+  "flame",
+  "gamepad-2",
+  "gem",
+  "graduation-cap",
+  "handshake",
+  "heart",
+  "heart-pulse",
+  "leaf",
+  "medal",
+  "message-square",
+  "moon",
+  "mountain",
+  "music",
+  "palette",
+  "pencil",
+  "rocket",
+  "shield",
+  "smile",
+  "sparkles",
+  "star",
+  "sun",
+  "sword",
+  "target",
+  "trophy",
+  "zap",
+] as const;
+
+export type CoreAttributeKey = (typeof ATTRIBUTE_KEYS)[number];
+export type AttributeKey = CoreAttributeKey | (string & Record<never, never>);
+export type AttributeColorScheme = (typeof ATTRIBUTE_COLOR_SCHEMES)[number];
+export type AttributeIconKey = (typeof ATTRIBUTE_ICON_KEYS)[number];
+
+export function isCoreAttributeKey(value: string): value is CoreAttributeKey {
+  return (ATTRIBUTE_KEYS as readonly string[]).includes(value);
+}
+
+export function isAttributeColorScheme(
+  value: string,
+): value is AttributeColorScheme {
+  return (ATTRIBUTE_COLOR_SCHEMES as readonly string[]).includes(value);
+}
+
+export function isAttributeIconKey(value: string): value is AttributeIconKey {
+  return (ATTRIBUTE_ICON_KEYS as readonly string[]).includes(value);
+}
 
 export type UserProfile = TimestampedEntity & {
   telegramId?: number;
@@ -45,6 +116,9 @@ export type AttributeProgress = TimestampedEntity & {
   key: AttributeKey;
   label: string;
   xp: number;
+  isDefault?: boolean;
+  colorScheme?: AttributeColorScheme;
+  icon?: AttributeIconKey;
 };
 
 export type TaskKind = "daily" | "goal" | "boss";

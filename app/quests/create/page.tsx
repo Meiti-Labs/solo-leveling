@@ -5,10 +5,15 @@ import { useRouter } from "next/navigation";
 import type { FormEvent, ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { ArrowLeft, CalendarDays, Check, Plus } from "lucide-react";
+import {
+  getAttributeColorSchemeOption,
+  getAttributeVisual,
+} from "@/components/attribute-visuals";
 import { Button } from "@/components/ui/button";
 import { gameService } from "@/lib/game";
 import type {
   AttributeKey,
+  CoreAttributeKey,
   TaskDifficulty,
   TaskKind,
 } from "@/lib/indexed-db/types";
@@ -154,7 +159,7 @@ const questPresets: QuestPreset[] = [
   },
 ];
 
-const fallbackAttributeLabels: Record<AttributeKey, string> = {
+const fallbackAttributeLabels: Record<CoreAttributeKey, string> = {
   communication: "Communication",
   discipline: "Discipline",
   finance: "Finance",
@@ -416,19 +421,34 @@ export default function CreateQuestPage() {
           <div className="grid grid-cols-2 gap-2">
             {attributes.map((attribute) => {
               const isSelected = selectedAttributes.includes(attribute.key);
+              const visual = getAttributeVisual(attribute);
+              const colorScheme = getAttributeColorSchemeOption(visual.color);
+              const Icon = visual.icon;
 
               return (
                 <button
                   className={cn(
-                    "flex h-12 items-center justify-between rounded-xl border border-slate-700/55 bg-[#07111f]/82 px-3 text-sm font-medium text-slate-300 transition",
+                    "flex h-14 items-center justify-between gap-2 rounded-xl border border-slate-700/55 bg-[#07111f]/82 px-3 text-sm font-medium text-slate-300 transition",
                     isSelected &&
-                      "border-emerald-400/70 bg-emerald-950/30 text-white shadow-[0_0_18px_rgba(16,185,129,0.22)]",
+                      "border-[#2f8cff]/80 bg-[#0d4fe0]/35 text-white shadow-[0_0_18px_rgba(47,140,255,0.22)]",
                   )}
                   key={attribute.key}
                   onClick={() => toggleAttribute(attribute.key)}
                   type="button"
                 >
-                  {attribute.label}
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span
+                      className={cn(
+                        "flex size-8 shrink-0 items-center justify-center rounded-xl border",
+                        colorScheme.badge,
+                      )}
+                    >
+                      <Icon
+                        className={cn("size-4 stroke-[2.3]", colorScheme.icon)}
+                      />
+                    </span>
+                    <span className="truncate">{attribute.label}</span>
+                  </span>
                   {isSelected && <Check className="size-4 text-emerald-300" />}
                 </button>
               );

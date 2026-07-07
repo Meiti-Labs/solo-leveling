@@ -1,18 +1,9 @@
 "use client";
 
-import type { ComponentType, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
-import {
-  BookOpen,
-  Check,
-  Circle,
-  Coins,
-  Dumbbell,
-  Flame,
-  MessageCircle,
-  Shield,
-  Trash2,
-} from "lucide-react";
+import { Check, Circle, Trash2 } from "lucide-react";
+import { getAttributeVisual } from "@/components/attribute-visuals";
 import { Button } from "@/components/ui/button";
 import ProgressionCelebrationModal from "@/components/progression-celebration-modal";
 import type { ProgressionModalData } from "@/components/progression-celebration-modal";
@@ -23,68 +14,44 @@ import type {
   AchievementDefinition,
   AttributeKey,
   AttributeProgress,
+  CoreAttributeKey,
   TaskCompletion,
   TaskDefinition,
   TaskDifficulty,
   TaskKind,
 } from "@/lib/indexed-db/types";
+import { isCoreAttributeKey } from "@/lib/indexed-db/types";
 import { cn } from "@/lib/utils";
 import { useGameSnapshot } from "@/hooks/use-game-snapshot";
 import type { GameSnapshot } from "@/hooks/use-game-snapshot";
 
 type QuestTone =
+  | "blue"
   | "red"
   | "purple"
   | "green"
   | "gold"
   | "cyan"
   | "pink"
+  | "indigo"
   | "boss";
 
-type AttributeVisual = {
-  fallbackLabel: string;
-  icon: ComponentType<{ className?: string }>;
-  tone: QuestTone;
-};
-
-const attributeVisuals: Record<AttributeKey, AttributeVisual> = {
-  strength: {
-    fallbackLabel: "Strength",
-    icon: Dumbbell,
-    tone: "red",
-  },
-  intelligence: {
-    fallbackLabel: "Intelligence",
-    icon: BookOpen,
-    tone: "purple",
-  },
-  discipline: {
-    fallbackLabel: "Discipline",
-    icon: Shield,
-    tone: "green",
-  },
-  finance: {
-    fallbackLabel: "Finance",
-    icon: Coins,
-    tone: "gold",
-  },
-  wisdom: {
-    fallbackLabel: "Wisdom",
-    icon: Flame,
-    tone: "cyan",
-  },
-  communication: {
-    fallbackLabel: "Communication",
-    icon: MessageCircle,
-    tone: "pink",
-  },
-};
+type QuestAttributeVisual = ReturnType<typeof getAttributeVisual>;
 
 const difficultyLabels: Record<TaskDifficulty, string> = {
   easy: "Easy",
   medium: "Medium",
   hard: "Hard",
   boss: "Hard",
+};
+
+const coreAttributeLabels: Record<CoreAttributeKey, string> = {
+  communication: "Communication",
+  discipline: "Discipline",
+  finance: "Finance",
+  intelligence: "Intelligence",
+  strength: "Strength",
+  wisdom: "Wisdom",
 };
 
 const kindOrder: Record<TaskKind, number> = {
@@ -102,6 +69,13 @@ const toneStyles: Record<
     text: string;
   }
 > = {
+  blue: {
+    badge:
+      "border-blue-500/80 bg-blue-950/25 shadow-[0_0_22px_rgba(59,130,246,0.18)]",
+    icon: "text-blue-300",
+    dot: "bg-blue-400",
+    text: "text-blue-300",
+  },
   red: {
     badge:
       "border-rose-500/80 bg-rose-950/25 shadow-[0_0_22px_rgba(244,63,94,0.18)]",
@@ -143,6 +117,13 @@ const toneStyles: Record<
     icon: "text-pink-300",
     dot: "bg-pink-400",
     text: "text-pink-300",
+  },
+  indigo: {
+    badge:
+      "border-indigo-500/80 bg-indigo-950/25 shadow-[0_0_22px_rgba(99,102,241,0.18)]",
+    icon: "text-indigo-300",
+    dot: "bg-indigo-400",
+    text: "text-indigo-300",
   },
   boss: {
     badge:
@@ -368,6 +349,7 @@ function QuestCard({
   return (
     <NormalQuestCard
       attributeLabel={getAttributeLabel(task, attributes)}
+      attributeVisual={getTaskAttributeVisual(task, attributes)}
       isConfirmingDelete={isConfirmingDelete}
       isCompleted={isCompleted}
       isDeleting={isDeleting}
@@ -381,6 +363,7 @@ function QuestCard({
 
 function NormalQuestCard({
   attributeLabel,
+  attributeVisual,
   isConfirmingDelete,
   isCompleted,
   isDeleting,
@@ -390,6 +373,7 @@ function NormalQuestCard({
   task,
 }: {
   attributeLabel: string;
+  attributeVisual: QuestAttributeVisual;
   isConfirmingDelete: boolean;
   isCompleted: boolean;
   isDeleting: boolean;
@@ -398,10 +382,8 @@ function NormalQuestCard({
   onDelete: () => void;
   task: TaskDefinition;
 }) {
-  const primaryAttribute = getPrimaryAttribute(task);
-  const visual = attributeVisuals[primaryAttribute];
-  const Icon = visual.icon;
-  const styles = toneStyles[visual.tone];
+  const Icon = attributeVisual.icon;
+  const styles = toneStyles[attributeVisual.color];
 
   return (
     <article
@@ -840,6 +822,18 @@ function getPrimaryAttribute(task: TaskDefinition): AttributeKey {
   return task.attributes[0]?.key ?? "discipline";
 }
 
+function getTaskAttributeVisual(
+  task: TaskDefinition,
+  attributes: Array<AttributeProgress>,
+) {
+  const primaryAttribute = getPrimaryAttribute(task);
+  const storedAttribute = attributes.find(
+    (attribute) => attribute.key === primaryAttribute,
+  );
+
+  return getAttributeVisual(storedAttribute ?? primaryAttribute);
+}
+
 function getAttributeLabel(
   task: TaskDefinition,
   attributes: Array<AttributeProgress>,
@@ -849,9 +843,7 @@ function getAttributeLabel(
       (candidate) => candidate.key === attribute.key,
     );
 
-    return (
-      storedAttribute?.label ?? attributeVisuals[attribute.key].fallbackLabel
-    );
+    return storedAttribute?.label ?? getAttributeFallbackLabel(attribute.key);
   });
 
   if (labels.length <= 1) {
@@ -859,4 +851,17 @@ function getAttributeLabel(
   }
 
   return `${labels[0]} +${labels.length - 1}`;
+}
+
+function getAttributeFallbackLabel(key: AttributeKey) {
+  if (isCoreAttributeKey(key)) {
+    return coreAttributeLabels[key];
+  }
+
+  return key
+    .replace(/^custom-/, "")
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ") || "Custom";
 }

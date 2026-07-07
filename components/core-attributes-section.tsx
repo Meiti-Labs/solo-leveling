@@ -12,7 +12,11 @@ import Link from "next/link";
 import type { ComponentType } from "react";
 import { Button } from "@/components/ui/button";
 import type { LevelProgress } from "@/lib/game/leveling";
-import type { AttributeKey, AttributeProgress } from "@/lib/indexed-db/types";
+import type {
+  AttributeKey,
+  AttributeProgress,
+  CoreAttributeKey,
+} from "@/lib/indexed-db/types";
 import { ATTRIBUTE_KEYS } from "@/lib/indexed-db/types";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +31,7 @@ type Attribute = {
 type AttributeWithLevel = AttributeProgress & { level: LevelProgress };
 
 const attributeVisuals: Record<
-  AttributeKey,
+  CoreAttributeKey,
   Pick<Attribute, "color" | "icon" | "label">
 > = {
   strength: {
