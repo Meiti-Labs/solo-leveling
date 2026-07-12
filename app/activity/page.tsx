@@ -209,11 +209,18 @@ function getActivityVisual(activity: ActivityEvent): {
     return { icon: Crown, tone: "blue" };
   }
 
-  if (activity.type === "achievement-unlocked") {
+  if (
+    activity.type === "achievement-unlocked" ||
+    activity.type === "avoidance-succeeded"
+  ) {
     return { icon: Trophy, tone: "green" };
   }
 
-  if (activity.type === "boss-failed" || activity.type === "daily-missed") {
+  if (
+    activity.type === "avoidance-slip" ||
+    activity.type === "boss-failed" ||
+    activity.type === "daily-missed"
+  ) {
     return { icon: Skull, tone: "red" };
   }
 

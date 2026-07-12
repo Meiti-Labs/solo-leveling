@@ -121,7 +121,7 @@ export type AttributeProgress = TimestampedEntity & {
   icon?: AttributeIconKey;
 };
 
-export type TaskKind = "daily" | "goal" | "boss";
+export type TaskKind = "daily" | "goal" | "boss" | "avoid";
 export type TaskStatus = "active" | "completed" | "failed" | "archived";
 export type TaskDifficulty = "easy" | "medium" | "hard" | "boss";
 
@@ -142,6 +142,8 @@ export type TaskDefinition = TimestampedEntity & {
   gemReward: number;
   deadline?: AppDate;
   missedPenaltyXp: number;
+  missedPenaltyCoins?: number;
+  missedPenaltyGems?: number;
   streakBonusEvery?: number;
   streakBonusXp?: number;
   isDefault: boolean;
@@ -237,6 +239,8 @@ export type ActivityEvent = TimestampedEntity & {
     | "task-completed"
     | "daily-missed"
     | "boss-failed"
+    | "avoidance-slip"
+    | "avoidance-succeeded"
     | "reward-purchased"
     | "reward-redeemed"
     | "achievement-unlocked"

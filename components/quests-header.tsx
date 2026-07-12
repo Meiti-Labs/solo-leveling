@@ -3,7 +3,15 @@
 import { ClipboardClock, Search } from "lucide-react";
 import PageHeader from "@/components/page-header";
 
-const questTabs = ["Daily", "Goals", "Bosses", "Challenges", "Completed"] as const;
+const questTabs = [
+  "All",
+  "Daily",
+  "Goals",
+  "Bosses",
+  "Challenges",
+  "Avoid",
+  "Completed",
+] as const;
 
 export type QuestTab = (typeof questTabs)[number];
 

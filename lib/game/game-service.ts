@@ -14,6 +14,7 @@ import {
   type StoreReward,
   type TaskCompletion,
   type TaskDefinition,
+  type UpdateEntity,
   type UserProfile,
   type UserProgress,
 } from "@/lib/indexed-db/types";
@@ -417,6 +418,90 @@ async function recordLevelUpIfNeeded(
   }
 }
 
+async function completeAvoidanceDeadline(
+  task: TaskDefinition,
+  progress: UserProgress,
+  completedForDate: AppDate,
+) {
+  const timestamp = now();
+  const overallLevelBefore = getLevelProgress(progress.overallXp).level;
+  const earnedXp = task.xpReward;
+  const earnedCoins = task.coinReward;
+  const earnedGems = task.gemReward;
+  const attributeXp = calculateAttributeXp(task, earnedXp);
+  const completion: TaskCompletion = {
+    id: createId(),
+    taskId: task.id,
+    taskKind: task.kind,
+    completedForDate,
+    completedAt: timestamp,
+    earnedXp,
+    earnedCoins,
+    earnedGems,
+    attributeXp,
+    offDayMultiplier: 1,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+
+  await db.taskCompletions.add(completion);
+  await addXpToAttributes(attributeXp);
+  await db.tasks.update(task.id, {
+    status: "completed",
+    updatedAt: timestamp,
+  });
+  await db.userProgress.update(progress.id, {
+    overallXp: progress.overallXp + earnedXp,
+    coins: progress.coins + earnedCoins,
+    gems: progress.gems + earnedGems,
+    updatedAt: timestamp,
+  });
+
+  if (earnedCoins > 0) {
+    await addWalletTransaction({
+      currency: "coins",
+      amount: earnedCoins,
+      reason: `Avoid quest succeeded: ${task.title}`,
+      sourceType: "task-completion",
+      sourceId: completion.id,
+    });
+  }
+
+  if (earnedGems > 0) {
+    await addWalletTransaction({
+      currency: "gems",
+      amount: earnedGems,
+      reason: `Avoid quest succeeded: ${task.title}`,
+      sourceType: "task-completion",
+      sourceId: completion.id,
+    });
+  }
+
+  await addActivity({
+    type: "avoidance-succeeded",
+    title: "Avoid Quest Succeeded",
+    description: task.title,
+    occurredAt: timestamp,
+    xpDelta: earnedXp,
+    coinDelta: earnedCoins,
+    gemDelta: earnedGems,
+    metadata: { taskId: task.id, completedForDate },
+  });
+
+  const updatedProgress = await db.userProgress.get(progress.id);
+  const overallLevelAfter = getLevelProgress(
+    updatedProgress?.overallXp ?? progress.overallXp + earnedXp,
+  ).level;
+
+  await recordLevelUpIfNeeded(overallLevelBefore, overallLevelAfter);
+
+  if (updatedProgress) {
+    await evaluateAchievements(updatedProgress);
+  }
+
+  return completion;
+}
+
 export const gameService = {
   async initialize(identity?: TelegramIdentity) {
     const timestamp = now();
@@ -512,6 +597,29 @@ export const gameService = {
     };
 
     await db.tasks.add(task);
+    return task;
+  },
+
+  async updateTask(
+    taskId: string,
+    input: UpdateEntity<TaskDefinition>,
+  ): Promise<TaskDefinition> {
+    await this.initialize();
+    const existingTask = await db.tasks.get(taskId);
+
+    if (!existingTask) {
+      throw new Error(`Task was not found: ${taskId}`);
+    }
+
+    const task: TaskDefinition = {
+      ...existingTask,
+      ...input,
+      id: existingTask.id,
+      createdAt: existingTask.createdAt,
+      updatedAt: now(),
+    };
+
+    await db.tasks.put(task);
     return task;
   },
 
@@ -620,6 +728,10 @@ export const gameService = {
 
     if (!task || task.status !== "active") {
       throw new Error(`Task is not active: ${taskId}`);
+    }
+
+    if (task.kind === "avoid") {
+      throw new Error("Avoid quests are completed by deadline or record a penalty.");
     }
 
     const existingCompletion =
@@ -810,6 +922,82 @@ export const gameService = {
     };
   },
 
+  async recordAvoidanceSlip(taskId: string) {
+    await this.initialize();
+    const task = await db.tasks.get(taskId);
+    const progress = await db.userProgress.get(MAIN_PROGRESS_ID);
+
+    if (!task || task.status !== "active" || task.kind !== "avoid") {
+      throw new Error(`Avoid quest is not active: ${taskId}`);
+    }
+
+    if (!progress) {
+      throw new Error("User progress is not initialized.");
+    }
+
+    const timestamp = now();
+    const penaltyXp = task.missedPenaltyXp;
+    const penaltyCoins = task.missedPenaltyCoins ?? 0;
+    const penaltyGems = task.missedPenaltyGems ?? 0;
+
+    await db.userProgress.update(progress.id, {
+      overallXp: Math.max(0, progress.overallXp - penaltyXp),
+      coins: Math.max(0, progress.coins - penaltyCoins),
+      gems: Math.max(0, progress.gems - penaltyGems),
+      lostXpCount: progress.lostXpCount + penaltyXp,
+      updatedAt: timestamp,
+    });
+
+    if (task.deadline) {
+      await db.tasks.update(task.id, {
+        status: "failed",
+        updatedAt: timestamp,
+      });
+    }
+
+    if (penaltyCoins > 0) {
+      await addWalletTransaction({
+        currency: "coins",
+        amount: -penaltyCoins,
+        reason: `Avoid quest penalty: ${task.title}`,
+        sourceType: "manual-adjustment",
+        sourceId: task.id,
+      });
+    }
+
+    if (penaltyGems > 0) {
+      await addWalletTransaction({
+        currency: "gems",
+        amount: -penaltyGems,
+        reason: `Avoid quest penalty: ${task.title}`,
+        sourceType: "manual-adjustment",
+        sourceId: task.id,
+      });
+    }
+
+    await addActivity({
+      type: "avoidance-slip",
+      title: "Avoid Quest Penalty",
+      description: task.title,
+      occurredAt: timestamp,
+      xpDelta: -penaltyXp,
+      coinDelta: penaltyCoins > 0 ? -penaltyCoins : undefined,
+      gemDelta: penaltyGems > 0 ? -penaltyGems : undefined,
+      metadata: {
+        date: toAppDate(),
+        taskId: task.id,
+        closedByDeadline: Boolean(task.deadline),
+      },
+    });
+
+    return {
+      penaltyCoins,
+      penaltyGems,
+      penaltyXp,
+      taskStatus: task.deadline ? "failed" : "active",
+    };
+  },
+
   async applyMissedDailyPenalties(date = getPreviousAppDate()) {
     await this.initialize();
     const progress = await db.userProgress.get(MAIN_PROGRESS_ID);
@@ -938,6 +1126,46 @@ export const gameService = {
     });
 
     return { failedBosses, penaltyXp };
+  },
+
+  async evaluateAvoidanceDeadlines(today = toAppDate()) {
+    await this.initialize();
+    const progress = await db.userProgress.get(MAIN_PROGRESS_ID);
+
+    if (!progress) {
+      return { completedAvoidanceTasks: [] };
+    }
+
+    const avoidanceTasks = await db.tasks
+      .where("kind")
+      .equals("avoid")
+      .filter(
+        (task) =>
+          task.status === "active" &&
+          Boolean(task.deadline) &&
+          task.deadline! < today,
+      )
+      .toArray();
+    const completedAvoidanceTasks: TaskDefinition[] = [];
+
+    for (const task of avoidanceTasks) {
+      const existingCompletion = await getTaskCompletion(task.id);
+
+      if (existingCompletion) {
+        continue;
+      }
+
+      const currentProgress = await db.userProgress.get(MAIN_PROGRESS_ID);
+
+      if (!currentProgress) {
+        continue;
+      }
+
+      await completeAvoidanceDeadline(task, currentProgress, task.deadline!);
+      completedAvoidanceTasks.push(task);
+    }
+
+    return { completedAvoidanceTasks };
   },
 
   async listActiveTasks() {

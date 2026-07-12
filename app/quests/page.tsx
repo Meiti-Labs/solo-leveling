@@ -12,7 +12,7 @@ import TodayStreakCard from "@/components/today-streak-card";
 
 export default function QuestsPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<QuestTab>("Daily");
+  const [activeTab, setActiveTab] = useState<QuestTab>("All");
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [questRevision, setQuestRevision] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");

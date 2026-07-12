@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { Check, Circle, Trash2 } from "lucide-react";
@@ -58,6 +59,14 @@ const kindOrder: Record<TaskKind, number> = {
   daily: 0,
   goal: 1,
   boss: 2,
+  avoid: 3,
+};
+
+const allTabKindOrder: Record<TaskKind, number> = {
+  goal: 0,
+  boss: 1,
+  avoid: 2,
+  daily: 3,
 };
 
 const toneStyles: Record<
@@ -173,7 +182,8 @@ export default function QuestListSection({
         taskMatchesSearch(task, snapshot.attributes, searchQuery),
       )
       .sort((first, second) => {
-        const kindDelta = kindOrder[first.kind] - kindOrder[second.kind];
+        const order = activeTab === "All" ? allTabKindOrder : kindOrder;
+        const kindDelta = order[first.kind] - order[second.kind];
 
         if (kindDelta !== 0) {
           return kindDelta;
@@ -196,6 +206,25 @@ export default function QuestListSection({
     try {
       setActionError(null);
       setSubmittingTaskId(task.id);
+
+      if (task.kind === "avoid") {
+        const result = await gameService.recordAvoidanceSlip(task.id);
+        await refresh();
+        setActionError(
+          `Penalty recorded: -${formatNumber(result.penaltyXp)} XP${
+            result.penaltyCoins > 0
+              ? `, -${formatNumber(result.penaltyCoins)} coins`
+              : ""
+          }${
+            result.penaltyGems > 0
+              ? `, -${formatNumber(result.penaltyGems)} gems`
+              : ""
+          }.`,
+        );
+        onQuestChanged?.();
+        return;
+      }
+
       const result = await gameService.completeTask(task.id, today);
       const nextSnapshot = await refresh();
       const nextModals = buildProgressionModals(task, result, nextSnapshot);
@@ -346,6 +375,23 @@ function QuestCard({
     );
   }
 
+  if (task.kind === "avoid") {
+    return (
+      <NormalQuestCard
+        attributeLabel={getAttributeLabel(task, attributes)}
+        attributeVisual={getTaskAttributeVisual(task, attributes)}
+        isConfirmingDelete={isConfirmingDelete}
+        isCompleted={isCompleted}
+        isDeleting={isDeleting}
+        isSubmitting={isSubmitting}
+        onComplete={onComplete}
+        onDelete={onDelete}
+        task={task}
+        variant="avoid"
+      />
+    );
+  }
+
   return (
     <NormalQuestCard
       attributeLabel={getAttributeLabel(task, attributes)}
@@ -357,6 +403,7 @@ function QuestCard({
       onComplete={onComplete}
       onDelete={onDelete}
       task={task}
+      variant="normal"
     />
   );
 }
@@ -371,6 +418,7 @@ function NormalQuestCard({
   onComplete,
   onDelete,
   task,
+  variant = "normal",
 }: {
   attributeLabel: string;
   attributeVisual: QuestAttributeVisual;
@@ -381,6 +429,7 @@ function NormalQuestCard({
   onComplete: () => void;
   onDelete: () => void;
   task: TaskDefinition;
+  variant?: "normal" | "avoid";
 }) {
   const Icon = attributeVisual.icon;
   const styles = toneStyles[attributeVisual.color];
@@ -388,41 +437,48 @@ function NormalQuestCard({
   return (
     <article
       className={cn(
-        "grid grid-cols-[4.25rem_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-slate-700/55 bg-[#07111f]/82 p-3 font-sans shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(99,148,216,0.06)] backdrop-blur-xl",
+        "flex items-center gap-3 rounded-xl border border-slate-700/55 bg-[#07111f]/82 p-3 font-sans shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(99,148,216,0.06)] backdrop-blur-xl transition hover:border-[#2f8cff]/55",
         isCompleted && "border-emerald-400/40 bg-emerald-950/10",
       )}
     >
-      <QuestIconBadge styles={styles}>
-        <Icon className={cn("size-6 stroke-[2.3]", styles.icon)} />
-      </QuestIconBadge>
+      <Link
+        aria-label={`Open ${task.title} details`}
+        className="grid min-w-0 flex-1 grid-cols-[4.25rem_minmax(0,1fr)_auto] items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-[#2f8cff]/50"
+        href={`/quests/${task.id}`}
+      >
+        <QuestIconBadge styles={styles}>
+          <Icon className={cn("size-6 stroke-[2.3]", styles.icon)} />
+        </QuestIconBadge>
 
-      <div className="min-w-0 space-y-1">
-        <h2 className="truncate text-base font-medium leading-tight text-white">
-          {task.title}
-        </h2>
-        <p className="truncate text-sm text-slate-400">{attributeLabel}</p>
-        <div className="flex items-center gap-1.5 text-sm">
-          <span className={cn("size-2 rounded-full", styles.dot)} />
-          <span className={styles.text}>{difficultyLabels[task.difficulty]}</span>
+        <div className="min-w-0 space-y-1">
+          <h2 className="truncate text-base font-medium leading-tight text-white">
+            {task.title}
+          </h2>
+          <p className="truncate text-sm text-slate-400">{attributeLabel}</p>
+          <div className="flex items-center gap-1.5 text-sm">
+            <span className={cn("size-2 rounded-full", styles.dot)} />
+            <span className={styles.text}>
+              {difficultyLabels[task.difficulty]}
+            </span>
+          </div>
         </div>
-      </div>
 
-      <div className="flex shrink-0 items-center gap-4">
         <RewardSummary task={task} />
-        <div className="flex items-center gap-1.5">
-          <DeleteButton
-            isConfirming={isConfirmingDelete}
-            isDeleting={isDeleting}
-            onDelete={onDelete}
-          />
-          <CompleteButton
-            isCompleted={isCompleted}
-            isSubmitting={isSubmitting}
-            label={isCompleted ? "Quest completed" : "Complete quest"}
-            onComplete={onComplete}
-            tone="emerald"
-          />
-        </div>
+      </Link>
+
+      <div className="flex shrink-0 items-center gap-1.5">
+        <DeleteButton
+          isConfirming={isConfirmingDelete}
+          isDeleting={isDeleting}
+          onDelete={onDelete}
+        />
+        <CompleteButton
+          isCompleted={isCompleted}
+          isSubmitting={isSubmitting}
+          label={getActionButtonLabel(task, isCompleted)}
+          onComplete={onComplete}
+          tone={variant === "avoid" ? "rose" : "emerald"}
+        />
       </div>
     </article>
   );
@@ -462,7 +518,11 @@ function BossQuestCard({
       <div className="absolute inset-y-0 left-0 w-2/3 bg-gradient-to-r from-[#070713] via-[#070713]/75 to-transparent" />
 
       <div className="relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-        <div className="min-w-0 space-y-2">
+        <Link
+          aria-label={`Open ${task.title} details`}
+          className="min-w-0 space-y-2 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-violet-400/50"
+          href={`/quests/${task.id}`}
+        >
           <div className="space-y-1">
             <p className="text-sm font-semibold text-violet-400">Boss Quest</p>
             <h2 className="truncate text-xl font-semibold leading-tight text-white">
@@ -480,7 +540,7 @@ function BossQuestCard({
             </div>
             <RewardSummary task={task} tone="violet" />
           </div>
-        </div>
+        </Link>
 
         <div className="flex items-center gap-1.5">
           <DeleteButton
@@ -512,16 +572,19 @@ function CompleteButton({
   isSubmitting: boolean;
   label: string;
   onComplete: () => void;
-  tone: "emerald" | "violet";
+  tone: "emerald" | "violet" | "rose";
 }) {
   const isViolet = tone === "violet";
+  const isRose = tone === "rose";
 
   return (
     <Button
       aria-label={label}
       className={cn(
         "size-10 rounded-full bg-transparent transition-all",
-        isViolet
+        isRose
+          ? "border border-rose-400/65 text-rose-300 hover:bg-rose-950/35"
+          : isViolet
           ? "border border-violet-400/65 text-violet-300 hover:bg-violet-950/45"
           : "border border-slate-600/80 text-slate-300 hover:border-emerald-400/70 hover:bg-emerald-950/25 hover:text-emerald-200",
         isCompleted &&
@@ -762,6 +825,10 @@ function shouldShowTaskForTab(
     return false;
   }
 
+  if (activeTab === "All") {
+    return true;
+  }
+
   if (activeTab === "Daily") {
     return task.kind === "daily";
   }
@@ -774,6 +841,10 @@ function shouldShowTaskForTab(
     return task.kind === "boss";
   }
 
+  if (activeTab === "Avoid") {
+    return task.kind === "avoid";
+  }
+
   if (activeTab === "Challenges") {
     return task.kind === "goal" && task.difficulty === "hard";
   }
@@ -783,14 +854,24 @@ function shouldShowTaskForTab(
 
 function getEmptyStateMessage(activeTab: QuestTab) {
   const messages: Record<QuestTab, string> = {
+    All: "No active quests yet. Create one to start leveling.",
     Daily: "No daily quests yet. Create one to build your streak.",
     Goals: "No active goals yet. Create a one-time quest to start moving.",
     Bosses: "No boss quests waiting. Create a boss when you need a serious fight.",
     Challenges: "No hard challenges yet. Hard goals will appear here.",
+    Avoid: "No avoid quests yet. Create one to track what you are not doing.",
     Completed: "No completed quests yet today. Finish something and it will land here.",
   };
 
   return messages[activeTab];
+}
+
+function getActionButtonLabel(task: TaskDefinition, isCompleted: boolean) {
+  if (task.kind === "avoid") {
+    return isCompleted ? "Avoid quest completed" : "Record penalty";
+  }
+
+  return isCompleted ? "Quest completed" : "Complete quest";
 }
 
 function taskMatchesSearch(

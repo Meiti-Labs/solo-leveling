@@ -61,6 +61,7 @@ export default function AppProvider({
       await gameService.initialize(parseTelegramUser(rawInitData));
       await gameService.applyMissedDailyPenalties();
       await gameService.evaluateBossDeadlines();
+      await gameService.evaluateAvoidanceDeadlines();
     }
 
     bootLocalGame().catch((error) => {
