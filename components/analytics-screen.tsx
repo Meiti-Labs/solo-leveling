@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ComponentType } from "react";
+import { useState, type ComponentType } from "react";
 import {
   ArrowRight,
   CheckSquare,
@@ -35,6 +35,32 @@ type RadarPoint = {
   value: number;
 };
 
+type DateRange = {
+  end: string;
+  start?: string;
+};
+
+type PeriodContext = {
+  comparisonLabel: string;
+  current: DateRange;
+  label: string;
+  previous?: DateRange;
+};
+
+type PeriodAnalytics = {
+  comparisonLabel: string;
+  completions: GameSnapshot["taskCompletions"];
+  label: string;
+  rewardPurchases: GameSnapshot["rewardPurchases"];
+  walletTransactions: GameSnapshot["walletTransactions"];
+  xp: number;
+  xpChange: string;
+};
+
+type TimeBucket = DateRange & {
+  label: string;
+};
+
 const periods: Period[] = ["Daily", "Weekly", "Monthly", "Yearly", "Lifetime"];
 
 const attributeOrder: CoreAttributeKey[] = [
@@ -50,12 +76,23 @@ const formatNumber = (value: number) =>
   new Intl.NumberFormat("en-US").format(value);
 
 export default function AnalyticsScreen() {
+  const [activePeriod, setActivePeriod] = useState<Period>("Daily");
   const { error, isLoading, refresh, snapshot } = useGameSnapshot();
+  const handlePeriodChange = (tab: string) => {
+    if (isPeriod(tab)) {
+      setActivePeriod(tab);
+    }
+  };
 
   if (isLoading) {
     return (
       <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
-        <PageHeader tabs={periods} title="Analytics" />
+        <PageHeader
+          activeTab={activePeriod}
+          onTabChange={handlePeriodChange}
+          tabs={periods}
+          title="Analytics"
+        />
         {Array.from({ length: 4 }).map((_, index) => (
           <div
             className="h-40 animate-pulse rounded-2xl border border-slate-800/80 bg-[#07111f]/70"
@@ -69,7 +106,12 @@ export default function AnalyticsScreen() {
   if (error || !snapshot) {
     return (
       <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
-        <PageHeader tabs={periods} title="Analytics" />
+        <PageHeader
+          activeTab={activePeriod}
+          onTabChange={handlePeriodChange}
+          tabs={periods}
+          title="Analytics"
+        />
         <section className="rounded-xl border border-rose-500/50 bg-rose-950/20 p-4 text-sm text-rose-100">
           Could not load analytics. {error?.message}
         </section>
@@ -77,16 +119,15 @@ export default function AnalyticsScreen() {
     );
   }
 
-  const xpGrowth = buildXpGrowth(snapshot);
-  const categoryGrowth = buildCategoryGrowth(snapshot);
-  const stats = buildStats(snapshot);
-  const todayXp = xpGrowth.at(-1)?.value ?? 0;
-  const yesterdayXp = xpGrowth.at(-2)?.value ?? 0;
-  const xpChange = calculateChange(todayXp, yesterdayXp);
+  const periodAnalytics = buildPeriodAnalytics(snapshot, activePeriod);
+  const xpGrowth = buildXpGrowth(snapshot, activePeriod);
+  const categoryGrowth = buildCategoryGrowth(snapshot, periodAnalytics.completions);
+  const stats = buildStats(snapshot, periodAnalytics);
 
   return (
     <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
       <PageHeader
+        activeTab={activePeriod}
         actions={[
           {
             label: "Refresh analytics",
@@ -98,13 +139,16 @@ export default function AnalyticsScreen() {
             },
           },
         ]}
+        onTabChange={handlePeriodChange}
         tabs={periods}
         title="Analytics"
       />
       <XpGrowthCard
-        change={xpChange}
+        change={periodAnalytics.xpChange}
+        comparisonLabel={periodAnalytics.comparisonLabel}
+        periodLabel={periodAnalytics.label}
         points={xpGrowth}
-        totalXp={snapshot.progress.overallXp}
+        totalXp={periodAnalytics.xp}
       />
       <CategoryGrowthCard points={categoryGrowth} />
       <LevelRoadmapLink totalXp={snapshot.progress.overallXp} />
@@ -139,10 +183,14 @@ function LevelRoadmapLink({ totalXp }: { totalXp: number }) {
 
 function XpGrowthCard({
   change,
+  comparisonLabel,
+  periodLabel,
   points,
   totalXp,
 }: {
   change: string;
+  comparisonLabel: string;
+  periodLabel: string;
   points: ChartPoint[];
   totalXp: number;
 }) {
@@ -154,12 +202,15 @@ function XpGrowthCard({
           <p className="flex items-center gap-1.5 text-sm text-slate-300">
             <TrendingUp className="size-4 fill-emerald-400 text-emerald-400" />
             <span className="font-semibold text-emerald-400">{change}</span>
-            <span>vs yesterday</span>
+            <span>{comparisonLabel}</span>
           </p>
         </div>
-        <p className="shrink-0 text-2xl font-semibold text-white">
-          {formatNumber(totalXp)} XP
-        </p>
+        <div className="shrink-0 text-right">
+          <p className="text-2xl font-semibold text-white">
+            {formatNumber(totalXp)} XP
+          </p>
+          <p className="mt-1 text-xs font-medium text-slate-400">{periodLabel}</p>
+        </div>
       </div>
 
       <LineChart points={points} />
@@ -427,68 +478,303 @@ function AnalyticsStatCard({ stat }: { stat: StatCard }) {
   );
 }
 
-function buildXpGrowth(snapshot: GameSnapshot): ChartPoint[] {
-  const xpByDate = snapshot.taskCompletions.reduce<Record<string, number>>(
-    (dates, completion) => {
-      dates[completion.completedForDate] =
-        (dates[completion.completedForDate] ?? 0) + completion.earnedXp;
-      return dates;
-    },
-    {},
+function buildPeriodAnalytics(
+  snapshot: GameSnapshot,
+  period: Period,
+): PeriodAnalytics {
+  const context = getPeriodContext(period);
+  const completions = snapshot.taskCompletions.filter((completion) =>
+    isAppDateInRange(completion.completedForDate, context.current),
   );
+  const rewardPurchases = snapshot.rewardPurchases.filter((purchase) =>
+    isIsoDateInRange(purchase.purchasedAt, context.current),
+  );
+  const walletTransactions = snapshot.walletTransactions.filter((transaction) =>
+    isIsoDateInRange(transaction.occurredAt, context.current),
+  );
+  const xp = sumCompletionXp(completions);
+  const previousXp = context.previous
+    ? sumCompletionXpForRange(snapshot.taskCompletions, context.previous)
+    : 0;
 
-  return getLastDates(7).map((date) => ({
-    label: formatChartDate(date),
-    value: xpByDate[date] ?? 0,
+  return {
+    comparisonLabel: context.comparisonLabel,
+    completions,
+    label: context.label,
+    rewardPurchases,
+    walletTransactions,
+    xp,
+    xpChange: context.previous ? calculateChange(xp, previousXp) : "All time",
+  };
+}
+
+function buildXpGrowth(snapshot: GameSnapshot, period: Period): ChartPoint[] {
+  return buildTimeBuckets(period, snapshot.taskCompletions).map((bucket) => ({
+    label: bucket.label,
+    value: sumCompletionXpForRange(snapshot.taskCompletions, bucket),
   }));
 }
 
-function buildCategoryGrowth(snapshot: GameSnapshot): RadarPoint[] {
+function buildCategoryGrowth(
+  snapshot: GameSnapshot,
+  completions: GameSnapshot["taskCompletions"],
+): RadarPoint[] {
+  const xpByAttribute = completions.reduce<Record<string, number>>(
+    (totals, completion) => {
+      for (const grant of completion.attributeXp) {
+        totals[grant.key] = (totals[grant.key] ?? 0) + grant.xp;
+      }
+
+      return totals;
+    },
+    {},
+  );
+  const maxXp = Math.max(
+    1,
+    ...attributeOrder.map((key) => xpByAttribute[key] ?? 0),
+  );
+
   return attributeOrder.map((key) => {
     const attribute = snapshot.attributes.find((item) => item.key === key);
+    const xp = xpByAttribute[key] ?? 0;
 
     return {
       label: attribute?.label ?? capitalize(key),
-      value: attribute?.level.progressPercent ?? 0,
+      value: xp > 0 ? Math.round((xp / maxXp) * 100) : 0,
     };
   });
 }
 
-function buildStats(snapshot: GameSnapshot): StatCard[] {
-  const bossesCompleted = snapshot.taskCompletions.filter(
+function buildStats(
+  snapshot: GameSnapshot,
+  analytics: PeriodAnalytics,
+): StatCard[] {
+  const bossesCompleted = analytics.completions.filter(
     (completion) => completion.taskKind === "boss",
   ).length;
-  const today = getDateKey(new Date());
-  const todayCompletions = snapshot.taskCompletions.filter(
-    (completion) => completion.completedForDate === today,
-  ).length;
+  const coinsDelta = sumWalletDelta(analytics.walletTransactions, "coins");
+  const gemsDelta = sumWalletDelta(analytics.walletTransactions, "gems");
 
   return [
     {
       label: "Tasks Completed",
-      value: formatNumber(snapshot.taskCompletions.length),
-      helper: `${formatNumber(todayCompletions)} today`,
+      value: formatNumber(analytics.completions.length),
+      helper: analytics.label,
       icon: CheckSquare,
     },
     {
       label: "Wallet",
       value: formatNumber(snapshot.progress.coins),
-      helper: `${formatNumber(snapshot.progress.gems)} gems`,
+      helper: `${formatSignedNumber(coinsDelta)} coins / ${formatSignedNumber(
+        gemsDelta,
+      )} gems`,
       icon: CircleDollarSign,
     },
     {
       label: "Bosses Defeated",
       value: formatNumber(bossesCompleted),
-      helper: "toward 20/year",
+      helper: analytics.label,
       icon: ShieldCheck,
     },
     {
       label: "Rewards Claimed",
-      value: formatNumber(snapshot.rewardPurchases.length),
-      helper: `${formatNumber(snapshot.progress.currentStreak)} day streak`,
+      value: formatNumber(analytics.rewardPurchases.length),
+      helper: analytics.label,
       icon: Gem,
     },
   ];
+}
+
+function getPeriodContext(period: Period, baseDate = new Date()): PeriodContext {
+  const today = getDateKey(baseDate);
+
+  if (period === "Daily") {
+    const yesterday = getDateKey(addDays(baseDate, -1));
+
+    return {
+      comparisonLabel: "vs yesterday",
+      current: { start: today, end: today },
+      label: "today",
+      previous: { start: yesterday, end: yesterday },
+    };
+  }
+
+  if (period === "Weekly") {
+    const weekStart = getWeekStart(baseDate);
+    const previousWeekStart = addDays(weekStart, -7);
+    const previousWeekEnd = addDays(weekStart, -1);
+
+    return {
+      comparisonLabel: "vs last week",
+      current: { start: getDateKey(weekStart), end: today },
+      label: "this week",
+      previous: {
+        start: getDateKey(previousWeekStart),
+        end: getDateKey(previousWeekEnd),
+      },
+    };
+  }
+
+  if (period === "Monthly") {
+    const monthStart = new Date(baseDate.getFullYear(), baseDate.getMonth(), 1);
+    const previousMonthStart = new Date(
+      baseDate.getFullYear(),
+      baseDate.getMonth() - 1,
+      1,
+    );
+    const previousMonthEnd = addDays(monthStart, -1);
+
+    return {
+      comparisonLabel: "vs last month",
+      current: { start: getDateKey(monthStart), end: today },
+      label: "this month",
+      previous: {
+        start: getDateKey(previousMonthStart),
+        end: getDateKey(previousMonthEnd),
+      },
+    };
+  }
+
+  if (period === "Yearly") {
+    const yearStart = new Date(baseDate.getFullYear(), 0, 1);
+    const previousYearStart = new Date(baseDate.getFullYear() - 1, 0, 1);
+    const previousYearEnd = new Date(baseDate.getFullYear() - 1, 11, 31);
+
+    return {
+      comparisonLabel: "vs last year",
+      current: { start: getDateKey(yearStart), end: today },
+      label: "this year",
+      previous: {
+        start: getDateKey(previousYearStart),
+        end: getDateKey(previousYearEnd),
+      },
+    };
+  }
+
+  return {
+    comparisonLabel: "earned",
+    current: { end: today },
+    label: "all time",
+  };
+}
+
+function buildTimeBuckets(
+  period: Period,
+  completions: GameSnapshot["taskCompletions"],
+  baseDate = new Date(),
+): TimeBucket[] {
+  if (period === "Daily") {
+    return getLastDates(7, baseDate).map((date) => ({
+      end: date,
+      label: formatChartDate(date),
+      start: date,
+    }));
+  }
+
+  if (period === "Weekly") {
+    const weekStart = getWeekStart(baseDate);
+
+    return Array.from({ length: 8 }, (_, index) => {
+      const start = addDays(weekStart, -7 * (7 - index));
+      const end = addDays(start, 6);
+
+      return {
+        end: getDateKey(end),
+        label: formatShortDate(start),
+        start: getDateKey(start),
+      };
+    });
+  }
+
+  if (period === "Monthly") {
+    return buildMonthBuckets(6, baseDate);
+  }
+
+  if (period === "Yearly") {
+    return buildMonthBuckets(12, baseDate);
+  }
+
+  return buildLifetimeBuckets(completions, baseDate);
+}
+
+function buildMonthBuckets(count: number, baseDate: Date): TimeBucket[] {
+  const currentMonthStart = new Date(
+    baseDate.getFullYear(),
+    baseDate.getMonth(),
+    1,
+  );
+
+  return Array.from({ length: count }, (_, index) => {
+    const start = new Date(
+      currentMonthStart.getFullYear(),
+      currentMonthStart.getMonth() - (count - 1 - index),
+      1,
+    );
+    const end = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+
+    return {
+      end: getDateKey(end),
+      label: formatMonthBucket(start),
+      start: getDateKey(start),
+    };
+  });
+}
+
+function buildLifetimeBuckets(
+  completions: GameSnapshot["taskCompletions"],
+  baseDate: Date,
+): TimeBucket[] {
+  const currentYear = baseDate.getFullYear();
+  const completionYears = completions.map((completion) =>
+    Number(completion.completedForDate.slice(0, 4)),
+  );
+  const firstYear = Math.min(currentYear, ...completionYears);
+
+  return Array.from({ length: currentYear - firstYear + 1 }, (_, index) => {
+    const year = firstYear + index;
+
+    return {
+      end: `${year}-12-31`,
+      label: String(year),
+      start: `${year}-01-01`,
+    };
+  });
+}
+
+function sumCompletionXp(completions: GameSnapshot["taskCompletions"]) {
+  return completions.reduce((total, completion) => total + completion.earnedXp, 0);
+}
+
+function sumCompletionXpForRange(
+  completions: GameSnapshot["taskCompletions"],
+  range: DateRange,
+) {
+  return sumCompletionXp(
+    completions.filter((completion) =>
+      isAppDateInRange(completion.completedForDate, range),
+    ),
+  );
+}
+
+function sumWalletDelta(
+  transactions: GameSnapshot["walletTransactions"],
+  currency: "coins" | "gems",
+) {
+  return transactions
+    .filter((transaction) => transaction.currency === currency)
+    .reduce((total, transaction) => total + transaction.amount, 0);
+}
+
+function isAppDateInRange(date: string, range: DateRange) {
+  return (!range.start || date >= range.start) && date <= range.end;
+}
+
+function isIsoDateInRange(value: string, range: DateRange) {
+  return isAppDateInRange(getDateKey(new Date(value)), range);
+}
+
+function isPeriod(value: string): value is Period {
+  return (periods as readonly string[]).includes(value);
 }
 
 function calculateChange(today: number, yesterday: number) {
@@ -506,12 +792,23 @@ function calculateChange(today: number, yesterday: number) {
   return `${prefix}${change.toFixed(1)}%`;
 }
 
-function getLastDates(count: number) {
+function getLastDates(count: number, baseDate = new Date()) {
   return Array.from({ length: count }, (_, index) => {
-    const date = new Date();
+    const date = new Date(baseDate);
     date.setDate(date.getDate() - (count - 1 - index));
     return getDateKey(date);
   });
+}
+
+function getWeekStart(date: Date) {
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  return addDays(start, -start.getDay());
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(date.getDate() + days);
+  return next;
 }
 
 function getDateKey(date: Date) {
@@ -531,6 +828,19 @@ function formatChartDate(dateKey: string) {
   }).format(date);
 }
 
+function formatShortDate(date: Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    day: "numeric",
+    month: "short",
+  }).format(date);
+}
+
+function formatMonthBucket(date: Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+  }).format(date);
+}
+
 function formatTick(value: number) {
   if (value >= 1000) {
     return `${Math.round(value / 1000)}K`;
@@ -546,6 +856,18 @@ function roundChartMax(value: number) {
 
   const magnitude = 10 ** Math.floor(Math.log10(value));
   return Math.ceil(value / magnitude) * magnitude;
+}
+
+function formatSignedNumber(value: number) {
+  if (value > 0) {
+    return `+${formatNumber(value)}`;
+  }
+
+  if (value < 0) {
+    return `-${formatNumber(Math.abs(value))}`;
+  }
+
+  return "0";
 }
 
 function capitalize(value: string) {

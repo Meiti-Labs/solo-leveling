@@ -27,6 +27,7 @@ type CalendarDay = {
   isCompleted: boolean;
   isCurrentMonth: boolean;
   isCurrentStreak: boolean;
+  isFreeDay: boolean;
   isMissed: boolean;
   isToday: boolean;
   startsCurrentStreak: boolean;
@@ -259,9 +260,10 @@ function buildCalendarData({
       .map((completion) => completion.completedForDate),
   );
   const missedDates = getMissedDatesForTask(activityEvents, task.id);
+  const taskCreatedDate = toDateKey(new Date(task.createdAt));
   const currentStreakDates = getCurrentStreakDates({
     completionDates,
-    taskCreatedAt: task.createdAt,
+    taskCreatedDate,
     today,
     weeklyOffDay,
   });
@@ -273,15 +275,21 @@ function buildCalendarData({
     const previousDateKey = toDateKey(addDays(date, -1));
     const nextDateKey = toDateKey(addDays(date, 1));
     const isCurrentStreak = currentStreakDates.has(dateKey);
+    const isFreeDay =
+      dateKey >= taskCreatedDate &&
+      dateKey <= today &&
+      date.getDay() === weeklyOffDay;
+    const isCompleted = completionDates.has(dateKey) || isFreeDay;
 
     return {
       date,
       dateKey,
       dayNumber: date.getDate(),
-      isCompleted: completionDates.has(dateKey),
+      isCompleted,
       isCurrentMonth: date.getMonth() === monthStart.getMonth(),
       isCurrentStreak,
-      isMissed: missedDates.has(dateKey),
+      isFreeDay,
+      isMissed: missedDates.has(dateKey) && !isFreeDay,
       isToday: dateKey === today,
       startsCurrentStreak:
         isCurrentStreak &&
@@ -323,29 +331,26 @@ function getMissedDatesForTask(activityEvents: ActivityEvent[], taskId: string) 
 
 function getCurrentStreakDates({
   completionDates,
-  taskCreatedAt,
+  taskCreatedDate,
   today,
   weeklyOffDay,
 }: {
   completionDates: Set<AppDate>;
-  taskCreatedAt: string;
+  taskCreatedDate: AppDate;
   today: AppDate;
   weeklyOffDay: number;
 }) {
   const streakDates = new Set<AppDate>();
-  const taskCreatedDate = toDateKey(new Date(taskCreatedAt));
-  let cursor = completionDates.has(today) ? today : toDateKey(addDays(fromAppDate(today), -1));
+  let cursor =
+    completionDates.has(today) || fromAppDate(today).getDay() === weeklyOffDay
+      ? today
+      : toDateKey(addDays(fromAppDate(today), -1));
 
   while (cursor >= taskCreatedDate) {
     const cursorDate = fromAppDate(cursor);
 
-    if (completionDates.has(cursor)) {
+    if (completionDates.has(cursor) || cursorDate.getDay() === weeklyOffDay) {
       streakDates.add(cursor);
-      cursor = toDateKey(addDays(cursorDate, -1));
-      continue;
-    }
-
-    if (cursorDate.getDay() === weeklyOffDay) {
       cursor = toDateKey(addDays(cursorDate, -1));
       continue;
     }
