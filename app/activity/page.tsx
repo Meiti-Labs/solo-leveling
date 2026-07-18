@@ -76,7 +76,7 @@ export default function ActivityPage() {
       <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-3 px-3 py-4">
         <Header />
         <section className="rounded-xl border border-rose-500/50 bg-rose-950/20 p-4 text-sm text-rose-100">
-          Could not load activity. {error?.message}
+          {t("error.loadActivity", { message: error?.message ?? "" })}
         </section>
       </main>
     );
@@ -140,11 +140,13 @@ function Header() {
 }
 
 function SummaryCard({ label, value }: { label: string; value: number }) {
+  const { formatNumber } = useI18n();
+
   return (
     <article className="rounded-xl border border-slate-700/55 bg-[#07111f]/82 p-3 shadow-[0_8px_22px_rgba(0,0,0,0.24),inset_0_1px_16px_rgba(99,148,216,0.05)]">
       <p className="truncate text-xs text-slate-400">{label}</p>
       <p className="mt-1 text-2xl font-semibold leading-none text-white">
-        {value}
+        {formatNumber(value)}
       </p>
     </article>
   );
@@ -261,7 +263,7 @@ function formatActivityDelta(
   t: (key: string) => string,
 ) {
   const deltas = [
-    createDelta(activity.xpDelta, "XP", formatNumber),
+    createDelta(activity.xpDelta, t("common.xp"), formatNumber),
     createDelta(activity.coinDelta, t("common.coins"), formatNumber),
     createDelta(activity.gemDelta, t("common.gems"), formatNumber),
   ].filter(Boolean) as Array<{ isNegative: boolean; label: string }>;

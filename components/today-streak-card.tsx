@@ -5,14 +5,13 @@ import { CalendarDays, CheckCircle2, Circle, Flame, ShieldCheck } from "lucide-r
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { isOffDay, toAppDate } from "@/lib/game/date";
+import { translateGameText, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useGameSnapshot } from "@/hooks/use-game-snapshot";
 
-const formatNumber = (value: number) =>
-  new Intl.NumberFormat("en-US").format(value);
-
 export default function TodayStreakCard({ revision }: { revision: number }) {
   const { error, isLoading, refresh, snapshot } = useGameSnapshot();
+  const { formatNumber, language, t } = useI18n();
   const today = toAppDate();
 
   useEffect(() => {
@@ -70,7 +69,7 @@ export default function TodayStreakCard({ revision }: { revision: number }) {
   if (error || !snapshot || !streakState) {
     return (
       <section className="rounded-2xl border border-rose-500/45 bg-rose-950/20 p-4 text-sm text-rose-100">
-        Could not load today&apos;s streak plan.
+        {t("error.loadStreakPlan")}
       </section>
     );
   }
@@ -83,16 +82,16 @@ export default function TodayStreakCard({ revision }: { revision: number }) {
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-sm font-medium text-[#5aa0ff]">
             <CalendarDays className="size-4" />
-            Today&apos;s Streak
+            {t("streak.today")}
           </p>
           <h2 className="mt-1 text-xl font-semibold leading-tight text-white">
             {streakState.isSecured
-              ? "Streak secured"
+              ? t("streak.secured")
               : remainingCount > 0
-                ? `${remainingCount} daily quest${
-                    remainingCount === 1 ? "" : "s"
-                  } left`
-                : "No daily quests"}
+                ? t("streak.left", {
+                    count: formatNumber(remainingCount),
+                  })
+                : t("streak.noDaily")}
           </h2>
         </div>
 
@@ -112,10 +111,10 @@ export default function TodayStreakCard({ revision }: { revision: number }) {
             <Flame className="size-3.5" />
           )}
           {streakState.isSecured
-            ? "Done"
+            ? t("streak.done")
             : streakState.isOffDay
-              ? "Off day"
-              : "Open"}
+              ? t("streak.offDay")
+              : t("streak.open")}
         </div>
       </div>
 
@@ -128,14 +127,15 @@ export default function TodayStreakCard({ revision }: { revision: number }) {
             />
           </div>
           <p className="text-sm text-slate-400">
-            {formatNumber(streakState.completedTasks.length)} /{" "}
-            {formatNumber(streakState.activeDailyTasks.length)} daily quests
-            completed
+            {t("streak.dailyCompleted", {
+              done: formatNumber(streakState.completedTasks.length),
+              total: formatNumber(streakState.activeDailyTasks.length),
+            })}
           </p>
         </div>
 
         <div className="text-right">
-          <p className="text-xs text-slate-400">Current</p>
+          <p className="text-xs text-slate-400">{t("level.current")}</p>
           <p className="text-2xl font-semibold leading-none text-white">
             {formatNumber(snapshot.progress.currentStreak)}
           </p>
@@ -147,16 +147,16 @@ export default function TodayStreakCard({ revision }: { revision: number }) {
           asChild
           className="h-10 w-full rounded-xl bg-[#0d4fe0] text-white hover:bg-[#155df0]"
         >
-          <Link href="/quests/create">Create Daily Quest</Link>
+          <Link href="/quests/create">{t("action.createDailyQuest")}</Link>
         </Button>
       ) : streakState.isSecured ? (
         <p className="rounded-xl border border-emerald-400/35 bg-emerald-950/20 px-3 py-2 text-sm text-emerald-100">
-          All active dailies are complete. Today&apos;s streak is locked in.
+          {t("streak.allDailiesComplete")}
         </p>
       ) : (
         <div className="space-y-2">
           <p className="text-sm text-slate-300">
-            Complete these to secure today&apos;s streak:
+            {t("streak.secureTasks")}
           </p>
           <div className="space-y-1.5">
             {streakState.remainingTasks.slice(0, 3).map((task) => (
@@ -165,13 +165,16 @@ export default function TodayStreakCard({ revision }: { revision: number }) {
                 key={task.id}
               >
                 <Circle className="size-3.5 shrink-0 text-slate-500" />
-                <span className="min-w-0 truncate">{task.title}</span>
+                <span className="min-w-0 truncate">
+                  {translateGameText(task.title, language) ?? task.title}
+                </span>
               </div>
             ))}
             {streakState.remainingTasks.length > 3 && (
               <p className="px-1 text-xs text-slate-500">
-                +{streakState.remainingTasks.length - 3} more daily quest
-                {streakState.remainingTasks.length - 3 === 1 ? "" : "s"}
+                {t("streak.moreDailyQuests", {
+                  count: formatNumber(streakState.remainingTasks.length - 3),
+                })}
               </p>
             )}
           </div>
@@ -181,8 +184,7 @@ export default function TodayStreakCard({ revision }: { revision: number }) {
       {streakState.isOffDay && !streakState.isSecured && (
         <p className="flex items-center gap-2 text-xs leading-relaxed text-cyan-200/85">
           <CheckCircle2 className="size-4 shrink-0" />
-          Off day is active: missing dailies will not break the streak, and
-          completed quests earn the off-day multiplier.
+          {t("streak.offDayActive")}
         </p>
       )}
     </section>

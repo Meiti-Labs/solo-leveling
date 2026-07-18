@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { Award, ShieldCheck, Skull, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type ProgressionModalVariant = "achievement" | "badge" | "boss" | "level-up";
@@ -160,6 +161,7 @@ export default function ProgressionCelebrationModal({
 
 function CelebrationVisual({ modal }: { modal: ProgressionModalData }) {
   const styles = variantStyles[modal.variant];
+  const { formatNumber, t } = useI18n();
 
   if (modal.variant === "level-up") {
     const level = modal.level ?? 1;
@@ -167,7 +169,7 @@ function CelebrationVisual({ modal }: { modal: ProgressionModalData }) {
     return (
       <div className="relative size-36">
         <Image
-          alt={`Level ${level} badge`}
+          alt={t("level.badgeAlt", { level: formatNumber(level) })}
           className={cn("object-contain", styles.imageGlow)}
           fill
           sizes="144px"
@@ -175,10 +177,10 @@ function CelebrationVisual({ modal }: { modal: ProgressionModalData }) {
         />
         <div className="absolute inset-0 flex flex-col items-center justify-center pt-2">
           <span className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-300">
-            Level
+            {t("level.label")}
           </span>
           <span className="text-4xl font-semibold leading-none text-white drop-shadow-[0_0_14px_rgba(92,160,255,0.95)]">
-            {level}
+            {formatNumber(level)}
           </span>
         </div>
       </div>

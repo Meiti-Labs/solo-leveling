@@ -16,13 +16,12 @@ import { Button } from "@/components/ui/button";
 import { rewardService } from "@/lib/game";
 import { useGameSnapshot } from "@/hooks/use-game-snapshot";
 import type { Currency, RewardPurchase } from "@/lib/indexed-db/types";
+import { translateGameText, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-
-const formatAmount = (amount: number) =>
-  new Intl.NumberFormat("en-US").format(amount);
 
 export default function StoreInventoryPage() {
   const { error, isLoading, refresh, snapshot } = useGameSnapshot();
+  const { formatNumber, language, t } = useI18n();
   const [actionNotice, setActionNotice] = useState<{
     tone: "success" | "error";
     message: string;
@@ -61,7 +60,9 @@ export default function StoreInventoryPage() {
       await refresh();
       setActionNotice({
         tone: "success",
-        message: `${purchase.title} marked as used.`,
+        message: t("store.markedUsed", {
+          title: translateGameText(purchase.title, language) ?? purchase.title,
+        }),
       });
     } catch (caughtError) {
       setActionNotice({
@@ -69,7 +70,7 @@ export default function StoreInventoryPage() {
         message:
           caughtError instanceof Error
             ? caughtError.message
-            : "Could not use this reward.",
+            : t("error.useReward"),
       });
     } finally {
       setBusyPurchaseId(null);
@@ -86,16 +87,16 @@ export default function StoreInventoryPage() {
             size="icon"
             variant="ghost"
           >
-            <Link aria-label="Back to Store" href="/store">
+            <Link aria-label={t("action.backStore")} href="/store">
               <ArrowLeft className="size-5" />
             </Link>
           </Button>
           <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#5aa0ff]">
-              Store
+              {t("common.store")}
             </p>
             <h1 className="truncate text-2xl font-semibold leading-none tracking-[-0.03em] text-white">
-              Inventory
+              {t("common.inventory")}
             </h1>
           </div>
         </div>
@@ -106,7 +107,7 @@ export default function StoreInventoryPage() {
 
       {error && (
         <p className="rounded-xl border border-rose-500/50 bg-rose-950/25 px-3 py-2 text-sm text-rose-100">
-          Could not load inventory. {error.message}
+          {t("error.loadInventory", { message: error.message })}
         </p>
       )}
 
@@ -130,31 +131,33 @@ export default function StoreInventoryPage() {
           <section className="grid grid-cols-2 gap-2">
             <SummaryTile
               icon={<PackageCheck className="size-5" />}
-              label="Ready"
-              value={formatAmount(readyPurchases.length)}
+              label={t("store.ready")}
+              value={formatNumber(readyPurchases.length)}
             />
             <SummaryTile
               icon={<CheckCircle2 className="size-5" />}
-              label="Redeemed"
-              value={formatAmount(redeemedPurchases.length)}
+              label={t("store.redeemed")}
+              value={formatNumber(redeemedPurchases.length)}
             />
             <SummaryTile
               icon={<CurrencyIcon currency="coins" />}
-              label="Coins Spent"
-              value={formatAmount(totals.coins)}
+              label={t("store.coinsSpent")}
+              value={formatNumber(totals.coins)}
             />
             <SummaryTile
               icon={<CurrencyIcon currency="gems" />}
-              label="Gems Spent"
-              value={formatAmount(totals.gems)}
+              label={t("store.gemsSpent")}
+              value={formatNumber(totals.gems)}
             />
           </section>
 
           <section className="space-y-2">
             <div className="flex items-center justify-between px-1">
-              <h2 className="text-sm font-medium text-white">Ready to Use</h2>
+              <h2 className="text-sm font-medium text-white">{t("store.readyToUse")}</h2>
               <span className="text-xs text-slate-400">
-                {formatAmount(readyPurchases.length)} available
+                {t("store.availableCount", {
+                  count: formatNumber(readyPurchases.length),
+                })}
               </span>
             </div>
 
@@ -162,7 +165,7 @@ export default function StoreInventoryPage() {
               <EmptyInventory />
             ) : readyPurchases.length === 0 ? (
               <p className="rounded-xl border border-slate-700/55 bg-[#07111f]/82 p-4 text-sm text-slate-300">
-                Every reward has been used. Time to earn another prize.
+                {t("store.allUsed")}
               </p>
             ) : (
               <div className="space-y-1.5">
@@ -181,9 +184,11 @@ export default function StoreInventoryPage() {
           {redeemedPurchases.length > 0 && (
             <section className="space-y-2">
               <div className="flex items-center justify-between px-1">
-                <h2 className="text-sm font-medium text-white">Redeemed</h2>
+                <h2 className="text-sm font-medium text-white">{t("store.redeemed")}</h2>
                 <span className="text-xs text-slate-400">
-                  {formatAmount(redeemedPurchases.length)} used
+                  {t("store.usedCount", {
+                    count: formatNumber(redeemedPurchases.length),
+                  })}
                 </span>
               </div>
 
@@ -233,8 +238,15 @@ function InventoryPurchaseRow({
   onRedeem?: () => void;
   purchase: RewardPurchase;
 }) {
+  const { formatDate, formatNumber, language, t } = useI18n();
   const isRedeemed = Boolean(purchase.redeemedAt);
   const timelineDate = purchase.redeemedAt ?? purchase.purchasedAt;
+  const title = translateGameText(purchase.title, language) ?? purchase.title;
+  const dateLabel = formatDate(timelineDate, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 
   return (
     <article
@@ -256,25 +268,25 @@ function InventoryPurchaseRow({
 
       <div className="min-w-0 space-y-1">
         <h3 className="truncate text-base font-medium leading-tight text-white">
-          {purchase.title}
+          {title}
         </h3>
         <p className="flex items-center gap-1 truncate text-xs text-slate-400">
           <CalendarDays className="size-3.5 shrink-0" />
           {isRedeemed
-            ? `Used ${formatPurchaseDate(timelineDate)}`
-            : `Bought ${formatPurchaseDate(timelineDate)}`}
+            ? t("store.usedDate", { date: dateLabel })
+            : t("store.boughtDate", { date: dateLabel })}
         </p>
       </div>
 
       <div className="flex shrink-0 flex-col items-end gap-1.5">
         <div className="flex items-center gap-1.5 text-base font-medium text-white">
           <CurrencyIcon currency={purchase.currency} />
-          <span>{formatAmount(purchase.cost)}</span>
+          <span>{formatNumber(purchase.cost)}</span>
         </div>
         {isRedeemed ? (
           <span className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-emerald-500/35 bg-emerald-950/20 px-2.5 text-xs font-semibold text-emerald-300">
             <CheckCircle2 className="size-3.5" />
-            Used
+            {t("store.used")}
           </span>
         ) : (
           <Button
@@ -289,7 +301,7 @@ function InventoryPurchaseRow({
             ) : (
               <CheckCircle2 className="mr-1.5 size-3.5" />
             )}
-            Mark Used
+            {t("action.markUsed")}
           </Button>
         )}
       </div>
@@ -298,20 +310,22 @@ function InventoryPurchaseRow({
 }
 
 function EmptyInventory() {
+  const { t } = useI18n();
+
   return (
     <article className="rounded-xl border border-slate-700/55 bg-[#07111f]/82 p-5 text-center shadow-[0_8px_22px_rgba(0,0,0,0.22),inset_0_1px_16px_rgba(99,148,216,0.05)]">
       <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl border border-[#2f8cff]/35 bg-blue-950/25 text-[#5aa0ff]">
         <Boxes className="size-6" />
       </div>
-      <h2 className="text-base font-semibold text-white">Inventory is empty</h2>
+      <h2 className="text-base font-semibold text-white">{t("store.inventoryEmpty")}</h2>
       <p className="mt-1 text-sm text-slate-400">
-        Buy a reward from the Store and it will appear here.
+        {t("store.inventoryEmptyBody")}
       </p>
       <Button
         asChild
         className="mt-4 rounded-xl bg-[#0d4fe0] px-5 text-white shadow-[0_0_18px_rgba(47,140,255,0.35)] hover:bg-[#155df0]"
       >
-        <Link href="/store">Browse Rewards</Link>
+        <Link href="/store">{t("action.browseRewards")}</Link>
       </Button>
     </article>
   );
@@ -358,10 +372,3 @@ function GemIcon() {
   );
 }
 
-function formatPurchaseDate(date: string) {
-  return new Intl.DateTimeFormat("en-US", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(date));
-}

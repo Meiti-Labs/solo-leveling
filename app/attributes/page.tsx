@@ -12,14 +12,13 @@ import type { AttributeProgress } from "@/lib/indexed-db/types";
 import { ATTRIBUTE_KEYS, isCoreAttributeKey } from "@/lib/indexed-db/types";
 import { cn } from "@/lib/utils";
 import { useGameSnapshot } from "@/hooks/use-game-snapshot";
+import { useI18n } from "@/lib/i18n";
 
 type AttributeWithLevel = AttributeProgress & { level: LevelProgress };
 
-const formatNumber = (value: number) =>
-  new Intl.NumberFormat("en-US").format(value);
-
 export default function AttributesPage() {
   const { error, isLoading, snapshot } = useGameSnapshot();
+  const { formatNumber, t } = useI18n();
 
   if (isLoading) {
     return (
@@ -40,7 +39,7 @@ export default function AttributesPage() {
       <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-3 px-3 py-4">
         <Header />
         <section className="rounded-xl border border-rose-500/50 bg-rose-950/20 p-4 text-sm text-rose-100">
-          Could not load attributes. {error?.message}
+          {t("error.loadAttributes", { message: error?.message ?? "" })}
         </section>
       </main>
     );
@@ -54,13 +53,13 @@ export default function AttributesPage() {
       <Header />
 
       <section className="rounded-2xl border border-[#2f8cff]/45 bg-[#07111f]/82 p-4 shadow-[0_0_26px_rgba(47,140,255,0.16),inset_0_1px_18px_rgba(99,148,216,0.08)]">
-        <p className="text-sm text-slate-400">Overall XP</p>
+        <p className="text-sm text-slate-400">{t("attribute.overallXp")}</p>
         <div className="mt-1 flex items-end justify-between gap-3">
           <p className="text-3xl font-semibold leading-none text-white">
             {formatNumber(snapshot.progress.overallXp)}
           </p>
           <p className="text-sm font-medium text-[#4f8cff]">
-            Level {snapshot.overallLevel.level}
+            {t("level.value", { level: formatNumber(snapshot.overallLevel.level) })}
           </p>
         </div>
       </section>
@@ -68,9 +67,12 @@ export default function AttributesPage() {
       <section className="space-y-2">
         <div className="flex items-center justify-between px-1">
           <div>
-            <h2 className="text-lg font-medium text-white">All Attributes</h2>
+            <h2 className="text-lg font-medium text-white">{t("attribute.all")}</h2>
             <p className="text-xs text-slate-500">
-              {customAttributeCount} custom / {attributes.length} total
+              {t("attribute.customSummary", {
+                custom: formatNumber(customAttributeCount),
+                total: formatNumber(attributes.length),
+              })}
             </p>
           </div>
         </div>
@@ -83,6 +85,8 @@ export default function AttributesPage() {
 }
 
 function Header() {
+  const { t } = useI18n();
+
   return (
     <header className="flex items-center gap-3 pt-2">
       <Button
@@ -91,22 +95,22 @@ function Header() {
         size="icon"
         variant="ghost"
       >
-        <Link aria-label="Back home" href="/">
+        <Link aria-label={t("action.backHome")} href="/">
           <ArrowLeft className="size-5" />
         </Link>
       </Button>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-[#3d87ff]">Progress</p>
+        <p className="text-sm font-medium text-[#3d87ff]">{t("common.progress")}</p>
         <div className="flex items-center gap-2">
           <h1 className="truncate text-3xl font-semibold leading-none tracking-[-0.03em] text-white">
-            Attributes
+            {t("common.attributes")}
           </h1>
           <Button
             asChild
             className="size-9 shrink-0 rounded-xl border border-[#2f8cff]/70 bg-[#0d4fe0] text-white shadow-[0_0_18px_rgba(47,140,255,0.35)] hover:bg-[#155df0]"
             size="icon"
           >
-            <Link aria-label="Create attribute" href="/attributes/create">
+            <Link aria-label={t("action.createAttribute")} href="/attributes/create">
               <Plus className="size-5" />
             </Link>
           </Button>
@@ -117,6 +121,7 @@ function Header() {
 }
 
 function AttributeRow({ attribute }: { attribute: AttributeWithLevel }) {
+  const { formatNumber, t } = useI18n();
   const visual = getAttributeVisual(attribute);
   const colorScheme = getAttributeColorSchemeOption(visual.color);
   const Icon = visual.icon;
@@ -142,17 +147,17 @@ function AttributeRow({ attribute }: { attribute: AttributeWithLevel }) {
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <h2 className="truncate text-lg font-medium leading-none text-white">
-              {attribute.label}
+              {getAttributeLabel(attribute, t)}
             </h2>
             {isEditable && (
               <p className="mt-1 text-xs font-medium text-[#4f8cff]">
-                Custom
+                {t("attribute.custom")}
               </p>
             )}
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             <span className="text-sm text-slate-300">
-              Lv. <span className="text-white">{attribute.level.level}</span>
+              {t("level.shortValue", { level: formatNumber(attribute.level.level) })}
             </span>
             {isEditable && (
               <Button
@@ -163,7 +168,9 @@ function AttributeRow({ attribute }: { attribute: AttributeWithLevel }) {
                 variant="ghost"
               >
                 <Link
-                  aria-label={`Edit ${attribute.label}`}
+                  aria-label={t("attribute.editLabel", {
+                    label: getAttributeLabel(attribute, t),
+                  })}
                   href={`/attributes/${attribute.id}/edit`}
                 >
                   <Pencil className="size-3.5" />
@@ -186,13 +193,15 @@ function AttributeRow({ attribute }: { attribute: AttributeWithLevel }) {
         <div className="flex items-center justify-between gap-3 text-sm text-slate-400">
           <p className="truncate">
             {isLegendary
-              ? `${formatNumber(attribute.level.totalXp)} total XP`
+              ? t("level.totalXp", {
+                  xp: formatNumber(attribute.level.totalXp),
+                })
               : `${formatNumber(attribute.level.xpIntoLevel)} / ${formatNumber(
                   attribute.level.xpForNextLevel,
-                )} XP`}
+                )} ${t("common.xp")}`}
           </p>
           <p className="shrink-0 text-slate-500">
-            Total {formatNumber(attribute.xp)}
+            {t("attribute.totalValue", { total: formatNumber(attribute.xp) })}
           </p>
         </div>
       </div>
@@ -216,4 +225,13 @@ function buildAttributeList(attributes: AttributeWithLevel[]) {
 
 function isEditableCustomAttribute(attribute: AttributeProgress) {
   return !attribute.isDefault && !isCoreAttributeKey(attribute.key);
+}
+
+function getAttributeLabel(
+  attribute: AttributeProgress,
+  t: (key: string) => string,
+) {
+  return attribute.isDefault && isCoreAttributeKey(attribute.key)
+    ? t(`attribute.${attribute.key}`)
+    : attribute.label;
 }

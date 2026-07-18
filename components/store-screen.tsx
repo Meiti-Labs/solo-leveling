@@ -143,7 +143,7 @@ export default function StoreScreen() {
       setNotice(
         caughtError instanceof Error
           ? caughtError.message
-          : "Could not purchase this reward.",
+          : t("error.purchaseReward"),
       );
     } finally {
       setPurchasingRewardId(null);
@@ -162,7 +162,7 @@ export default function StoreScreen() {
 
       {error && (
         <p className="rounded-xl border border-rose-500/50 bg-rose-950/25 px-3 py-2 text-sm text-rose-100">
-          Could not load store data. {error.message}
+          {t("error.loadStore", { message: error.message })}
         </p>
       )}
 

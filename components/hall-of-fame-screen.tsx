@@ -19,13 +19,19 @@ import { Button } from "@/components/ui/button";
 import { buildAchievementViews } from "@/lib/game/achievement-view";
 import type { AchievementView } from "@/lib/game/achievement-view";
 import type { ActivityEvent } from "@/lib/indexed-db/types";
+import { translateGameText, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useGameSnapshot } from "@/hooks/use-game-snapshot";
 
 type TimelineTone = "green" | "violet" | "gold" | "cyan" | "pink";
 
 const fallbackMedal = "/images/medals/star-shield-medal.png";
-const tabs = ["Medals", "Achievements", "Boss Trophies", "Titles"];
+const tabKeys = [
+  "hall.medals",
+  "hall.achievements",
+  "hall.bossTrophies",
+  "hall.titles",
+];
 
 const toneStyles: Record<TimelineTone, string> = {
   green:
@@ -42,6 +48,7 @@ const toneStyles: Record<TimelineTone, string> = {
 
 export default function HallOfFameScreen() {
   const { error, isLoading, snapshot } = useGameSnapshot();
+  const { t } = useI18n();
 
   if (isLoading) {
     return (
@@ -62,7 +69,7 @@ export default function HallOfFameScreen() {
       <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
         <HeroSection />
         <section className="rounded-xl border border-rose-500/50 bg-rose-950/20 p-4 text-sm text-rose-100">
-          Could not load Hall of Fame. {error?.message}
+          {t("error.loadHallOfFame", { message: error?.message ?? "" })}
         </section>
       </main>
     );
@@ -89,6 +96,8 @@ export default function HallOfFameScreen() {
 }
 
 function HeroSection() {
+  const { t } = useI18n();
+
   return (
     <section className="relative -mx-3 min-h-40 overflow-hidden px-3 pt-8">
       <div className="absolute inset-0 bg-[url('/images/hall-of-fame-banners/royal-crown-stage-banner.png')] bg-cover bg-center opacity-90" />
@@ -97,7 +106,7 @@ function HeroSection() {
 
       <div className="relative space-y-3">
         <h1 className="text-3xl font-semibold leading-none tracking-[-0.03em] text-white">
-          Hall of Fame
+          {t("common.hallOfFame")}
         </h1>
         <div className="h-px w-36 bg-gradient-to-r from-[#2f80ff] via-[#6fb6ff] to-transparent shadow-[0_0_12px_rgba(47,128,255,0.9)]" />
       </div>
@@ -110,9 +119,19 @@ function ProudAchievementCard({
 }: {
   achievement: AchievementView;
 }) {
+  const { formatDate, formatNumber, language, t } = useI18n();
+  const title = translateGameText(achievement.title, language) ?? achievement.title;
+  const description =
+    translateGameText(achievement.description, language) ??
+    achievement.description;
   const unlockedLabel = achievement.isUnlocked
-    ? `Unlocked on ${formatDate(achievement.unlockedAt)}`
-    : `${achievement.currentValue}/${achievement.target} progress`;
+    ? t("hall.unlockedOn", {
+        date: formatHallDate(achievement.unlockedAt, formatDate, t),
+      })
+    : t("hall.achievementProgress", {
+        current: formatNumber(achievement.currentValue),
+        target: formatNumber(achievement.target),
+      });
 
   return (
     <section className="relative -mt-14 overflow-hidden rounded-2xl border border-amber-500/60 bg-[#07111f]/90 p-4 shadow-[0_0_28px_rgba(245,158,11,0.25),inset_0_1px_20px_rgba(245,158,11,0.12)]">
@@ -122,7 +141,7 @@ function ProudAchievementCard({
       <div className="relative grid grid-cols-[7rem_minmax(0,1fr)] items-center gap-3">
         <div className="relative aspect-square w-full rotate-[-8deg]">
           <Image
-            alt={`${achievement.title} medal`}
+            alt={t("hall.medalAlt", { title })}
             className={cn(
               "object-contain drop-shadow-[0_0_18px_rgba(245,158,11,0.65)]",
               !achievement.isUnlocked && "grayscale opacity-60",
@@ -138,14 +157,14 @@ function ProudAchievementCard({
           <p className="flex items-center gap-1.5 truncate text-sm font-medium text-amber-300">
             <Crown className="size-4 fill-amber-300/20" />
             {achievement.isUnlocked
-              ? "Most Proud Achievement"
-              : "Next Achievement"}
+              ? t("hall.mostProudAchievement")
+              : t("hall.nextAchievement")}
           </p>
           <h2 className="truncate text-3xl font-semibold leading-none text-amber-200">
-            {achievement.title}
+            {title}
           </h2>
           <p className="truncate text-base text-slate-300">
-            {achievement.description}
+            {description}
           </p>
           <p className="flex items-center gap-2 truncate text-sm text-slate-400">
             <CalendarDays className="size-4" />
@@ -158,12 +177,14 @@ function ProudAchievementCard({
 }
 
 function HallTabs() {
+  const { t } = useI18n();
+
   return (
     <nav
-      aria-label="Hall of Fame sections"
+      aria-label={t("hall.sections")}
       className="grid grid-cols-4 overflow-hidden rounded-2xl border border-slate-700/55 bg-[#07111f]/82 shadow-[inset_0_1px_18px_rgba(99,148,216,0.06)]"
     >
-      {tabs.map((tab, index) => {
+      {tabKeys.map((tabKey, index) => {
         const active = index === 0;
 
         return (
@@ -174,11 +195,11 @@ function HallTabs() {
                 ? "bg-[#0d4fe0]/80 text-white shadow-[0_0_18px_rgba(47,140,255,0.45),inset_0_1px_12px_rgba(255,255,255,0.12)] hover:bg-[#155df0]/90"
                 : "bg-transparent text-slate-400 hover:bg-[#0b1728] hover:text-slate-200",
             )}
-            key={tab}
+            key={tabKey}
             type="button"
             variant={active ? "default" : "ghost"}
           >
-            <span className="truncate">{tab}</span>
+            <span className="truncate">{t(tabKey)}</span>
           </Button>
         );
       })}
@@ -191,12 +212,14 @@ function RecentUnlocks({
 }: {
   achievements: AchievementView[];
 }) {
+  const { formatNumber, language, t } = useI18n();
+
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3 px-1">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
           <Sparkles className="size-4 fill-amber-200 text-amber-200" />
-          Recent Unlocks
+          {t("hall.recentUnlocks")}
         </h2>
         <Button
           asChild
@@ -204,7 +227,7 @@ function RecentUnlocks({
           variant="link"
         >
           <Link href="/hall-of-fame/unlocks">
-            View All
+            {t("action.viewAll")}
             <ChevronRight className="size-4" />
           </Link>
         </Button>
@@ -212,26 +235,13 @@ function RecentUnlocks({
 
       <div className="grid grid-cols-4 gap-2 rounded-2xl border border-slate-700/55 bg-[#07111f]/82 p-3 shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(99,148,216,0.06)]">
         {achievements.map((achievement) => (
-          <div
-            className="relative aspect-square rounded-xl border border-[#2f8cff]/20 bg-blue-950/20"
+          <RecentAchievementIcon
+            achievement={achievement}
+            formatNumber={formatNumber}
             key={achievement.key}
-          >
-            <Image
-              alt={`${achievement.title} medal`}
-              className={cn(
-                "object-contain p-1 drop-shadow-[0_0_14px_rgba(245,158,11,0.35)]",
-                !achievement.isUnlocked && "grayscale opacity-45",
-              )}
-              fill
-              sizes="88px"
-              src={achievement.medalImage ?? fallbackMedal}
-            />
-            {!achievement.isUnlocked && (
-              <span className="absolute bottom-1 right-1 rounded-full bg-slate-950/80 px-1.5 py-0.5 text-[10px] font-semibold text-slate-300">
-                {achievement.progressPercent}%
-              </span>
-            )}
-          </div>
+            language={language}
+            t={t}
+          />
         ))}
       </div>
     </section>
@@ -239,6 +249,7 @@ function RecentUnlocks({
 }
 
 function LegacyTimeline({ activities }: { activities: ActivityEvent[] }) {
+  const { formatDate, language, t } = useI18n();
   const timeline = activities
     .filter((activity) =>
       [
@@ -256,13 +267,13 @@ function LegacyTimeline({ activities }: { activities: ActivityEvent[] }) {
     <section className="space-y-3">
       <h2 className="flex items-center gap-2 px-1 text-lg font-semibold text-white">
         <ShieldCheck className="size-4 text-slate-300" />
-        Legacy Timeline
+        {t("hall.legacyTimeline")}
       </h2>
 
       <div className="rounded-2xl border border-slate-700/55 bg-[#07111f]/82 p-4 shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(99,148,216,0.06)]">
         {timeline.length === 0 ? (
           <p className="text-sm text-slate-400">
-            Complete quests and unlock achievements to build your legacy.
+            {t("hall.legacyEmpty")}
           </p>
         ) : (
           <div className="relative space-y-0">
@@ -286,10 +297,10 @@ function LegacyTimeline({ activities }: { activities: ActivityEvent[] }) {
                   </div>
                   <div className="min-w-0">
                     <h3 className="truncate text-base font-medium text-white">
-                      {item.title}
+                      {translateGameText(item.title, language) ?? item.title}
                     </h3>
                     <p className="text-sm text-slate-400">
-                      {formatDate(item.occurredAt)}
+                      {formatHallDate(item.occurredAt, formatDate, t)}
                     </p>
                   </div>
                   <ChevronRight className="size-5 text-slate-400" />
@@ -330,20 +341,61 @@ function getTimelineVisual(activity: ActivityEvent): {
   return { icon: Sparkles, tone: "violet" };
 }
 
-function formatDate(isoDate?: string) {
+function RecentAchievementIcon({
+  achievement,
+  formatNumber,
+  language,
+  t,
+}: {
+  achievement: AchievementView;
+  formatNumber: (value: number) => string;
+  language: "en" | "fa";
+  t: (key: string, params?: Record<string, number | string>) => string;
+}) {
+  const title = translateGameText(achievement.title, language) ?? achievement.title;
+
+  return (
+    <div
+      className="relative aspect-square rounded-xl border border-[#2f8cff]/20 bg-blue-950/20"
+      key={achievement.key}
+    >
+      <Image
+        alt={t("hall.medalAlt", { title })}
+        className={cn(
+          "object-contain p-1 drop-shadow-[0_0_14px_rgba(245,158,11,0.35)]",
+          !achievement.isUnlocked && "grayscale opacity-45",
+        )}
+        fill
+        sizes="88px"
+        src={achievement.medalImage ?? fallbackMedal}
+      />
+      {!achievement.isUnlocked && (
+        <span className="absolute bottom-1 right-1 rounded-full bg-slate-950/80 px-1.5 py-0.5 text-[10px] font-semibold text-slate-300">
+          {formatNumber(achievement.progressPercent)}%
+        </span>
+      )}
+    </div>
+  );
+}
+
+function formatHallDate(
+  isoDate: string | undefined,
+  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string,
+  t: (key: string) => string,
+) {
   if (!isoDate) {
-    return "Locked";
+    return t("hall.locked");
   }
 
   const date = new Date(isoDate);
 
   if (Number.isNaN(date.getTime())) {
-    return "Recently";
+    return t("period.recently");
   }
 
-  return new Intl.DateTimeFormat("en-US", {
+  return formatDate(date, {
     day: "numeric",
     month: "short",
     year: "numeric",
-  }).format(date);
+  });
 }

@@ -6,9 +6,11 @@ import CoreAttributesSection from "@/components/core-attributes-section";
 import TodayOverviewSection from "@/components/today-overview-section";
 import RecentActivitySection from "@/components/recent-activity-section";
 import { useGameSnapshot } from "@/hooks/use-game-snapshot";
+import { useI18n } from "@/lib/i18n";
 
 export default function HomeScreen() {
   const { error, isLoading, snapshot } = useGameSnapshot();
+  const { t } = useI18n();
 
   if (isLoading) {
     return (
@@ -27,7 +29,7 @@ export default function HomeScreen() {
     return (
       <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md px-3 py-4">
         <section className="rounded-xl border border-rose-500/50 bg-rose-950/20 p-4 text-sm text-rose-100">
-          Could not load your local progress. {error?.message}
+          {t("error.loadLocalProgress", { message: error?.message ?? "" })}
         </section>
       </main>
     );

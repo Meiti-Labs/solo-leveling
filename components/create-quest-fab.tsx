@@ -4,9 +4,11 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export default function CreateQuestFab() {
+  const { t } = useI18n();
   const [isVisible, setIsVisible] = useState(true);
   const lastScrollY = useRef(0);
 
@@ -41,7 +43,7 @@ export default function CreateQuestFab() {
       >
         <Link href="/quests/create">
           <Plus className="size-5" />
-          Create Quest
+          {t("action.createQuest")}
         </Link>
       </Button>
     </div>

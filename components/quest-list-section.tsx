@@ -226,7 +226,7 @@ export default function QuestListSection({
       setActionError(
         caughtError instanceof Error
           ? caughtError.message
-          : "Could not complete this quest.",
+          : t("error.completeQuest"),
       );
     } finally {
       setSubmittingTaskId(null);
@@ -250,7 +250,7 @@ export default function QuestListSection({
       setActionError(
         caughtError instanceof Error
           ? caughtError.message
-          : "Could not delete this quest.",
+          : t("error.deleteQuest"),
       );
     } finally {
       setDeletingTaskId(null);
@@ -277,7 +277,7 @@ export default function QuestListSection({
     return (
       <>
         <section className="rounded-xl border border-rose-500/50 bg-rose-950/20 p-4 text-sm text-rose-100">
-          Could not load quests from this device. {error.message}
+          {t("error.loadQuests", { message: error.message })}
         </section>
         {progressionModal}
       </>
@@ -701,7 +701,7 @@ function RewardSummary({
       >
         +{formatNumber(task.xpReward)}{" "}
         <span className={tone === "violet" ? "text-violet-400" : "text-[#3d87ff]"}>
-          XP
+          {t("common.xp")}
         </span>
       </p>
       {extras.length > 0 && (
@@ -751,7 +751,9 @@ function buildProgressionModals(
       actionLabel: i18n.t("action.claimReward"),
       eyebrow: i18n.t("modal.bossDefeated"),
       id: `boss-${result.completion.id}`,
-      rewardLabel: `+${i18n.formatNumber(result.completion.earnedXp)} XP`,
+      rewardLabel: `+${i18n.formatNumber(result.completion.earnedXp)} ${i18n.t(
+        "common.xp",
+      )}`,
       subtitle: i18n.t("modal.youConquered", {
         title: translateGameText(task.title, i18n.language) ?? task.title,
       }),
@@ -832,7 +834,10 @@ function buildCompletionStats(
   },
 ) {
   return [
-    { label: "XP", value: `+${i18n.formatNumber(result.completion.earnedXp)}` },
+    {
+      label: i18n.t("common.xp"),
+      value: `+${i18n.formatNumber(result.completion.earnedXp)}`,
+    },
     {
       label: i18n.t("common.coins"),
       value: `+${i18n.formatNumber(result.completion.earnedCoins)}`,

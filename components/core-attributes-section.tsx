@@ -164,7 +164,7 @@ function AttributeCard({
 }: {
   attribute: Attribute;
   formatNumber: (value: number) => string;
-  t: (key: string) => string;
+  t: (key: string, params?: Record<string, number | string>) => string;
 }) {
   const Icon = attribute.icon;
   const percent = attribute.progress.progressPercent;
@@ -192,7 +192,9 @@ function AttributeCard({
             {attribute.label}
           </h3>
           <span className="shrink-0 text-sm text-slate-300">
-            {t("level.short")} <span className="text-white">{attribute.progress.level}</span>
+            {t("level.shortValue", {
+              level: formatNumber(attribute.progress.level),
+            })}
           </span>
         </div>
 
@@ -208,7 +210,7 @@ function AttributeCard({
             ? `${formatNumber(attribute.progress.totalXp)} ${t("home.totalXp")}`
             : `${formatNumber(attribute.progress.xpIntoLevel)} / ${formatNumber(
                 attribute.progress.xpForNextLevel,
-              )} XP`}
+              )} ${t("common.xp")}`}
         </p>
       </div>
     </article>

@@ -13,14 +13,14 @@ import { Button } from "@/components/ui/button";
 import { useGameSnapshot } from "@/hooks/use-game-snapshot";
 import type { GameSnapshot } from "@/hooks/use-game-snapshot";
 import { gameService } from "@/lib/game";
+import { useI18n } from "@/lib/i18n";
 import type {
   AttributeKey,
-  CoreAttributeKey,
   TaskDifficulty,
   TaskDefinition,
   TaskKind,
 } from "@/lib/indexed-db/types";
-import { ATTRIBUTE_KEYS } from "@/lib/indexed-db/types";
+import { ATTRIBUTE_KEYS, isCoreAttributeKey } from "@/lib/indexed-db/types";
 import { cn } from "@/lib/utils";
 
 type QuestFormScreenProps = {
@@ -66,9 +66,9 @@ type QuestPreset = {
   difficulty: Exclude<TaskDifficulty, "boss">;
   gemReward: string;
   kind: TaskKind;
+  labelKey: string;
   missedPenaltyCoins?: string;
   missedPenaltyGems?: string;
-  label: string;
   missedPenaltyXp?: string;
   streakBonusEvery?: string;
   streakBonusXp?: string;
@@ -77,39 +77,53 @@ type QuestPreset = {
 };
 
 const kindOptions: Array<{
-  description: string;
-  label: string;
+  descriptionKey: string;
+  labelKey: string;
   value: TaskKind;
 }> = [
   {
-    description: "Repeats every day and can build streak bonuses.",
-    label: "Daily",
+    descriptionKey: "quest.kind.dailyDescription",
+    labelKey: "quest.kind.daily",
     value: "daily",
   },
   {
-    description: "One-time quest that disappears after completion.",
-    label: "Goal",
+    descriptionKey: "quest.kind.goalDescription",
+    labelKey: "quest.kind.goal",
     value: "goal",
   },
   {
-    description: "High-impact one-time quest with stronger XP pressure.",
-    label: "Boss",
+    descriptionKey: "quest.kind.bossDescription",
+    labelKey: "quest.kind.boss",
     value: "boss",
   },
   {
-    description: "Avoid an action. Pressing it records a penalty.",
-    label: "Avoid",
+    descriptionKey: "quest.kind.avoidDescription",
+    labelKey: "quest.kind.avoid",
     value: "avoid",
   },
 ];
 
 const difficultyOptions: Array<{
-  label: string;
+  labelKey: string;
   value: Exclude<TaskDifficulty, "boss">;
 }> = [
-  { label: "Easy", value: "easy" },
-  { label: "Medium", value: "medium" },
-  { label: "Hard", value: "hard" },
+  { labelKey: "difficulty.easy", value: "easy" },
+  { labelKey: "difficulty.medium", value: "medium" },
+  { labelKey: "difficulty.hard", value: "hard" },
+];
+
+const penaltyOptions = [
+  { labelKey: "quest.penalty.light", value: 0.2 },
+  { labelKey: "quest.penalty.normal", value: 0.3 },
+  { labelKey: "quest.penalty.severe", value: 0.5 },
+  { labelKey: "quest.penalty.boss", value: 0.75 },
+];
+
+const deadlineShortcutOptions = [
+  { labelKey: "quest.deadline.none", value: undefined },
+  { labelKey: "quest.deadline.3d", value: 3 },
+  { labelKey: "quest.deadline.7d", value: 7 },
+  { labelKey: "quest.deadline.30d", value: 30 },
 ];
 
 const questPresets: QuestPreset[] = [
@@ -120,7 +134,7 @@ const questPresets: QuestPreset[] = [
     difficulty: "easy",
     gemReward: "0",
     kind: "daily",
-    label: "Workout Daily",
+    labelKey: "quest.preset.workoutDaily",
     streakBonusEvery: "7",
     streakBonusXp: "25",
     title: "Morning Workout",
@@ -133,7 +147,7 @@ const questPresets: QuestPreset[] = [
     difficulty: "medium",
     gemReward: "1",
     kind: "daily",
-    label: "Reading Daily",
+    labelKey: "quest.preset.readingDaily",
     streakBonusEvery: "7",
     streakBonusXp: "25",
     title: "Read 20 Pages",
@@ -146,7 +160,7 @@ const questPresets: QuestPreset[] = [
     difficulty: "medium",
     gemReward: "0",
     kind: "goal",
-    label: "Savings Goal",
+    labelKey: "quest.preset.savingsGoal",
     title: "Save $100",
     xpReward: "220",
   },
@@ -157,7 +171,7 @@ const questPresets: QuestPreset[] = [
     difficulty: "hard",
     gemReward: "2",
     kind: "goal",
-    label: "Hard Challenge",
+    labelKey: "quest.preset.hardChallenge",
     missedPenaltyXp: "90",
     title: "7 Day No Sugar Challenge",
     xpReward: "300",
@@ -169,7 +183,7 @@ const questPresets: QuestPreset[] = [
     difficulty: "hard",
     gemReward: "3",
     kind: "boss",
-    label: "Boss Quest",
+    labelKey: "quest.preset.bossQuest",
     missedPenaltyXp: "250",
     title: "Inner Procrastination",
     xpReward: "650",
@@ -181,7 +195,7 @@ const questPresets: QuestPreset[] = [
     difficulty: "medium",
     gemReward: "1",
     kind: "avoid",
-    label: "Avoid Habit",
+    labelKey: "quest.preset.avoidHabit",
     missedPenaltyCoins: "25",
     missedPenaltyGems: "0",
     missedPenaltyXp: "80",
@@ -190,17 +204,9 @@ const questPresets: QuestPreset[] = [
   },
 ];
 
-const fallbackAttributeLabels: Record<CoreAttributeKey, string> = {
-  communication: "Communication",
-  discipline: "Discipline",
-  finance: "Finance",
-  intelligence: "Intelligence",
-  strength: "Strength",
-  wisdom: "Wisdom",
-};
-
 export default function QuestFormScreen({ taskId }: QuestFormScreenProps) {
   const { error: loadError, isLoading, snapshot } = useGameSnapshot();
+  const { t } = useI18n();
   const isEditing = Boolean(taskId);
   const task = isEditing
     ? snapshot?.tasks.find((candidate) => candidate.id === taskId)
@@ -211,8 +217,8 @@ export default function QuestFormScreen({ taskId }: QuestFormScreenProps) {
       <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
         <QuestFormHeader
           backHref="/quests"
-          eyebrow="Quest Control"
-          title="Edit Quest"
+          eyebrow={t("quest.control")}
+          title={t("quest.edit")}
         />
         <div className="h-96 animate-pulse rounded-2xl border border-slate-800/80 bg-[#07111f]/70" />
       </main>
@@ -224,11 +230,11 @@ export default function QuestFormScreen({ taskId }: QuestFormScreenProps) {
       <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
         <QuestFormHeader
           backHref="/quests"
-          eyebrow="Quest Control"
-          title={isEditing ? "Edit Quest" : "Create Quest"}
+          eyebrow={t("quest.control")}
+          title={isEditing ? t("quest.edit") : t("quest.new")}
         />
         <section className="rounded-xl border border-rose-500/50 bg-rose-950/20 p-4 text-sm text-rose-100">
-          {loadError?.message ?? "Quest was not found on this device."}
+          {loadError?.message ?? t("error.questNotFound")}
         </section>
       </main>
     );
@@ -254,6 +260,7 @@ function QuestForm({
   task?: TaskDefinition;
 }) {
   const router = useRouter();
+  const { formatNumber, t } = useI18n();
   const [form, setForm] = useState<FormState>(() => getFormStateFromTask(task));
   const [selectedAttributes, setSelectedAttributes] = useState<AttributeKey[]>(
     () => getSelectedAttributesFromTask(task),
@@ -265,15 +272,18 @@ function QuestForm({
     if (snapshot?.attributes.length) {
       return snapshot.attributes.map((attribute) => ({
         key: attribute.key,
-        label: attribute.label,
+        label:
+          attribute.isDefault && isCoreAttributeKey(attribute.key)
+            ? t(`attribute.${attribute.key}`)
+            : attribute.label,
       }));
     }
 
     return ATTRIBUTE_KEYS.map((key) => ({
       key,
-      label: fallbackAttributeLabels[key],
+      label: t(`attribute.${key}`),
     }));
-  }, [snapshot]);
+  }, [snapshot, t]);
 
   const isOneTimeQuest = form.kind !== "daily";
 
@@ -359,12 +369,12 @@ function QuestForm({
     const streakBonusXp = parsePositiveNumber(form.streakBonusXp);
 
     if (!title) {
-      setError("Give the quest a title.");
+      setError(t("error.questTitleRequired"));
       return;
     }
 
     if (form.kind !== "avoid" && (!xpReward || xpReward <= 0)) {
-      setError("XP reward should be greater than zero.");
+      setError(t("error.xpRewardRequired"));
       return;
     }
 
@@ -408,8 +418,8 @@ function QuestForm({
         caughtError instanceof Error
           ? caughtError.message
           : isEditing
-            ? "Could not update this quest."
-            : "Could not create this quest.",
+            ? t("error.updateQuest")
+            : t("error.createQuest"),
       );
     } finally {
       setIsSaving(false);
@@ -420,32 +430,32 @@ function QuestForm({
     <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
       <QuestFormHeader
         backHref={task ? `/quests/${task.id}` : "/quests"}
-        eyebrow={isEditing ? "Quest Control" : "New Quest"}
-        title={isEditing ? "Edit Quest" : "Create Quest"}
+        eyebrow={isEditing ? t("quest.control") : t("quest.new")}
+        title={isEditing ? t("quest.edit") : t("action.createQuest")}
       />
 
       <form className="space-y-4" onSubmit={saveQuest}>
         <section className="space-y-3">
-          <SectionLabel>Quick Presets</SectionLabel>
+          <SectionLabel>{t("quest.quickPresets")}</SectionLabel>
           <div className="-mx-3 overflow-x-auto px-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <div className="flex min-w-max gap-2">
               {questPresets.map((preset) => (
                 <button
                   className="min-h-20 w-36 rounded-2xl border border-slate-700/55 bg-[#07111f]/82 p-3 text-left shadow-[inset_0_1px_18px_rgba(99,148,216,0.05)] transition hover:border-[#2f8cff]/60 hover:bg-[#0b1728]"
-                  key={preset.label}
+                  key={preset.labelKey}
                   onClick={() => applyPreset(preset)}
                   type="button"
                 >
                   <span className="block text-sm font-semibold text-white">
-                    {preset.label}
+                    {t(preset.labelKey)}
                   </span>
                   <span className="mt-1 block text-xs capitalize text-slate-400">
                     {preset.kind === "goal" && preset.difficulty === "hard"
-                      ? "challenge"
-                      : preset.kind}
+                      ? t("quest.challenge")
+                      : t(`quest.${preset.kind}`)}
                   </span>
                   <span className="mt-2 block text-xs font-semibold text-[#4f8cff]">
-                    +{preset.xpReward} XP
+                    +{formatNumber(Number(preset.xpReward))} {t("common.xp")}
                   </span>
                 </button>
               ))}
@@ -454,29 +464,29 @@ function QuestForm({
         </section>
 
         <section className="space-y-3 rounded-2xl border border-slate-700/55 bg-[#07111f]/82 p-4 shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(99,148,216,0.06)] backdrop-blur-xl">
-          <LabeledField label="Quest title">
+          <LabeledField label={t("quest.title")}>
             <input
               className={inputClassName}
               onChange={(event) => updateField("title", event.target.value)}
-              placeholder="Morning workout"
+              placeholder={t("quest.titlePlaceholder")}
               value={form.title}
             />
           </LabeledField>
 
-          <LabeledField label="Description">
+          <LabeledField label={t("quest.description")}>
             <textarea
               className={cn(inputClassName, "min-h-20 resize-none py-2")}
               onChange={(event) =>
                 updateField("description", event.target.value)
               }
-              placeholder="What does completing this prove?"
+              placeholder={t("quest.descriptionPlaceholder")}
               value={form.description}
             />
           </LabeledField>
         </section>
 
         <section className="space-y-3">
-          <SectionLabel>Quest Type</SectionLabel>
+          <SectionLabel>{t("quest.type")}</SectionLabel>
           <div className="grid grid-cols-2 gap-2">
             {kindOptions.map((option) => {
               const isActive = form.kind === option.value;
@@ -493,10 +503,10 @@ function QuestForm({
                   type="button"
                 >
                   <span className="block text-base font-semibold text-white">
-                    {option.label}
+                    {t(option.labelKey)}
                   </span>
                   <span className="mt-1 block text-[11px] leading-snug text-slate-300">
-                    {option.description}
+                    {t(option.descriptionKey)}
                   </span>
                 </button>
               );
@@ -505,7 +515,7 @@ function QuestForm({
         </section>
 
         <section className="space-y-3">
-          <SectionLabel>Attributes</SectionLabel>
+          <SectionLabel>{t("quest.attributes")}</SectionLabel>
           <div className="grid grid-cols-2 gap-2">
             {attributes.map((attribute) => {
               const isSelected = selectedAttributes.includes(attribute.key);
@@ -546,7 +556,7 @@ function QuestForm({
 
         <section className="space-y-3 rounded-2xl border border-slate-700/55 bg-[#07111f]/82 p-4 shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(99,148,216,0.06)] backdrop-blur-xl">
           <div className="grid grid-cols-3 gap-2">
-            <LabeledField label="XP">
+            <LabeledField label={t("common.xp")}>
               <input
                 className={inputClassName}
                 inputMode="numeric"
@@ -554,7 +564,7 @@ function QuestForm({
                 value={form.xpReward}
               />
             </LabeledField>
-            <LabeledField label="Coins">
+            <LabeledField label={t("common.coinsLabel")}>
               <input
                 className={inputClassName}
                 inputMode="numeric"
@@ -564,7 +574,7 @@ function QuestForm({
                 value={form.coinReward}
               />
             </LabeledField>
-            <LabeledField label="Gems">
+            <LabeledField label={t("common.gemsLabel")}>
               <input
                 className={inputClassName}
                 inputMode="numeric"
@@ -575,7 +585,7 @@ function QuestForm({
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <LabeledField label="Difficulty">
+            <LabeledField label={t("quest.difficulty")}>
               <select
                 className={inputClassName}
                 disabled={form.kind === "boss"}
@@ -589,20 +599,20 @@ function QuestForm({
               >
                 {difficultyOptions.map((option) => (
                   <option key={option.value} value={option.value}>
-                    {option.label}
+                    {t(option.labelKey)}
                   </option>
                 ))}
               </select>
             </LabeledField>
 
-            <LabeledField label="XP loss">
+            <LabeledField label={t("quest.xpLoss")}>
               <input
                 className={inputClassName}
                 inputMode="numeric"
                 onChange={(event) =>
                   updateField("missedPenaltyXp", event.target.value)
                 }
-                placeholder="Auto"
+                placeholder={t("quest.auto")}
                 value={form.missedPenaltyXp}
               />
             </LabeledField>
@@ -610,7 +620,7 @@ function QuestForm({
 
           {form.kind === "avoid" && (
             <div className="grid grid-cols-2 gap-2 rounded-xl border border-rose-500/25 bg-rose-950/10 p-3">
-              <LabeledField label="Coin loss">
+              <LabeledField label={t("quest.coinLoss")}>
                 <input
                   className={inputClassName}
                   inputMode="numeric"
@@ -620,7 +630,7 @@ function QuestForm({
                   value={form.missedPenaltyCoins}
                 />
               </LabeledField>
-              <LabeledField label="Gem loss">
+              <LabeledField label={t("quest.gemLoss")}>
                 <input
                   className={inputClassName}
                   inputMode="numeric"
@@ -631,34 +641,28 @@ function QuestForm({
                 />
               </LabeledField>
               <p className="col-span-2 text-xs leading-relaxed text-rose-100/75">
-                Avoid quests reward you if the deadline passes untouched. If
-                you press the penalty button, these losses apply immediately.
+                {t("quest.avoidHelp")}
               </p>
             </div>
           )}
 
           <div className="grid grid-cols-4 gap-1.5">
-            {[
-              { label: "Light", value: 0.2 },
-              { label: "Normal", value: 0.3 },
-              { label: "Severe", value: 0.5 },
-              { label: "Boss", value: 0.75 },
-            ].map((option) => (
+            {penaltyOptions.map((option) => (
               <Button
                 className="h-9 rounded-xl border border-slate-700/60 bg-[#030914]/70 px-2 text-xs font-medium text-slate-300 hover:bg-[#0b1728] hover:text-white"
-                key={option.label}
+                key={option.labelKey}
                 onClick={() => applyPenaltyPercent(option.value)}
                 type="button"
                 variant="ghost"
               >
-                {option.label}
+                {t(option.labelKey)}
               </Button>
             ))}
           </div>
 
           {form.kind === "daily" && (
             <div className="grid grid-cols-2 gap-2 rounded-xl border border-emerald-500/25 bg-emerald-950/10 p-3">
-              <LabeledField label="Streak every">
+              <LabeledField label={t("quest.streakEvery")}>
                 <input
                   className={inputClassName}
                   inputMode="numeric"
@@ -668,7 +672,7 @@ function QuestForm({
                   value={form.streakBonusEvery}
                 />
               </LabeledField>
-              <LabeledField label="Bonus XP">
+              <LabeledField label={t("quest.bonusXp")}>
                 <input
                   className={inputClassName}
                   inputMode="numeric"
@@ -679,15 +683,14 @@ function QuestForm({
                 />
               </LabeledField>
               <p className="col-span-2 text-xs leading-relaxed text-emerald-100/70">
-                Daily quests repeat tomorrow. Missing one on a normal day breaks
-                streak and applies the XP loss above.
+                {t("quest.dailyRulesBody")}
               </p>
             </div>
           )}
 
           {isOneTimeQuest && (
             <div className="space-y-2">
-              <LabeledField label="Deadline">
+              <LabeledField label={t("quest.deadline")}>
                 <div className="relative">
                   <CalendarDays className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
                   <input
@@ -701,20 +704,15 @@ function QuestForm({
                 </div>
               </LabeledField>
               <div className="grid grid-cols-4 gap-1.5">
-                {[
-                  { label: "None", value: undefined },
-                  { label: "3d", value: 3 },
-                  { label: "7d", value: 7 },
-                  { label: "30d", value: 30 },
-                ].map((option) => (
+                {deadlineShortcutOptions.map((option) => (
                   <Button
                     className="h-9 rounded-xl border border-slate-700/60 bg-[#030914]/70 px-2 text-xs font-medium text-slate-300 hover:bg-[#0b1728] hover:text-white"
-                    key={option.label}
+                    key={option.labelKey}
                     onClick={() => applyDeadlineShortcut(option.value)}
                     type="button"
                     variant="ghost"
                   >
-                    {option.label}
+                    {t(option.labelKey)}
                   </Button>
                 ))}
               </div>
@@ -736,11 +734,11 @@ function QuestForm({
           {isEditing ? <Save className="size-5" /> : <Plus className="size-5" />}
           {isSaving
             ? isEditing
-              ? "Saving..."
-              : "Creating..."
+              ? t("action.saving")
+              : t("action.creating")
             : isEditing
-              ? "Save Quest"
-              : "Create Quest"}
+              ? t("action.saveQuest")
+              : t("action.createQuest")}
         </Button>
       </form>
     </main>
@@ -756,6 +754,8 @@ function QuestFormHeader({
   eyebrow: string;
   title: string;
 }) {
+  const { t } = useI18n();
+
   return (
     <header className="flex items-center justify-between gap-3 pt-2">
       <Button
@@ -764,7 +764,7 @@ function QuestFormHeader({
         size="icon"
         variant="ghost"
       >
-        <Link aria-label="Back to quests" href={backHref}>
+        <Link aria-label={t("action.backQuests")} href={backHref}>
           <ArrowLeft className="size-5" />
         </Link>
       </Button>

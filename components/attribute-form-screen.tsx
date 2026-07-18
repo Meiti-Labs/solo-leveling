@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useGameSnapshot } from "@/hooks/use-game-snapshot";
 import { gameService } from "@/lib/game";
+import { useI18n } from "@/lib/i18n";
 import type {
   AttributeColorScheme,
   AttributeIconKey,
@@ -30,6 +31,7 @@ export default function AttributeFormScreen({
   attributeId,
 }: AttributeFormScreenProps) {
   const { error: loadError, isLoading, snapshot } = useGameSnapshot();
+  const { t } = useI18n();
   const isEditing = Boolean(attributeId);
   const attribute = isEditing
     ? snapshot?.attributes.find((candidate) => candidate.id === attributeId)
@@ -38,7 +40,7 @@ export default function AttributeFormScreen({
   if (isEditing && isLoading) {
     return (
       <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
-        <Header title="Edit Attribute" />
+        <Header title={t("attribute.edit")} />
         <div className="h-72 animate-pulse rounded-2xl border border-slate-800/80 bg-[#07111f]/70" />
       </main>
     );
@@ -47,9 +49,9 @@ export default function AttributeFormScreen({
   if (loadError || (isEditing && !attribute)) {
     return (
       <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
-        <Header title={isEditing ? "Edit Attribute" : "Create Attribute"} />
+        <Header title={isEditing ? t("attribute.edit") : t("attribute.create")} />
         <section className="rounded-xl border border-rose-500/50 bg-rose-950/20 p-4 text-sm text-rose-100">
-          {loadError?.message ?? "Attribute was not found on this device."}
+          {loadError?.message ?? t("error.attributeNotFound")}
         </section>
       </main>
     );
@@ -58,9 +60,9 @@ export default function AttributeFormScreen({
   if (attribute && isLockedDefaultAttribute(attribute)) {
     return (
       <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
-        <Header title="Edit Attribute" />
+        <Header title={t("attribute.edit")} />
         <section className="rounded-xl border border-amber-500/50 bg-amber-950/20 p-4 text-sm text-amber-100">
-          Core attributes keep their original visuals.
+          {t("error.attributeLocked")}
         </section>
       </main>
     );
@@ -83,6 +85,7 @@ function AttributeForm({
   isEditing: boolean;
 }) {
   const router = useRouter();
+  const { t } = useI18n();
   const [title, setTitle] = useState(attribute?.label ?? "");
   const [colorScheme, setColorScheme] = useState<AttributeColorScheme>(
     getAttributeColorSchemeOption(attribute?.colorScheme).key,
@@ -100,7 +103,7 @@ function AttributeForm({
     const label = title.trim();
 
     if (!label) {
-      setError("Give the attribute a title.");
+      setError(t("error.attributeTitleRequired"));
       return;
     }
 
@@ -126,7 +129,7 @@ function AttributeForm({
       setError(
         caughtError instanceof Error
           ? caughtError.message
-          : "Could not save this attribute.",
+          : t("error.saveAttribute"),
       );
     } finally {
       setIsSaving(false);
@@ -139,7 +142,7 @@ function AttributeForm({
 
   return (
     <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
-      <Header title={isEditing ? "Edit Attribute" : "Create Attribute"} />
+      <Header title={isEditing ? t("attribute.edit") : t("attribute.create")} />
 
       <form className="space-y-4" onSubmit={submitAttribute}>
         <section className="grid grid-cols-[4rem_minmax(0,1fr)] items-center gap-3 rounded-2xl border border-slate-700/55 bg-[#07111f]/82 p-4 shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(99,148,216,0.06)] backdrop-blur-xl">
@@ -160,10 +163,10 @@ function AttributeForm({
 
           <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-[0.08em] text-slate-500">
-              Preview
+              {t("attribute.preview")}
             </p>
             <h2 className="truncate text-xl font-semibold text-white">
-              {title.trim() || "New Attribute"}
+              {title.trim() || t("attribute.new")}
             </h2>
             <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800/85">
               <div
@@ -177,20 +180,20 @@ function AttributeForm({
         </section>
 
         <section className="space-y-3 rounded-2xl border border-slate-700/55 bg-[#07111f]/82 p-4 shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(99,148,216,0.06)] backdrop-blur-xl">
-          <LabeledField label="Title">
+          <LabeledField label={t("attribute.titleLabel")}>
             <input
               className={inputClassName}
               disabled={isSaving}
               maxLength={32}
               onChange={(event) => setTitle(event.target.value)}
-              placeholder="Coding, Music, Mindfulness..."
+              placeholder={t("attribute.titlePlaceholder")}
               value={title}
             />
           </LabeledField>
         </section>
 
         <section className="space-y-3">
-          <SectionLabel>Color Scheme</SectionLabel>
+          <SectionLabel>{t("attribute.colorScheme")}</SectionLabel>
           <div className="grid grid-cols-2 gap-2">
             {attributeColorSchemeOptions.map((scheme) => {
               const isActive = colorScheme === scheme.key;
@@ -213,7 +216,7 @@ function AttributeForm({
                         scheme.progress,
                       )}
                     />
-                    {scheme.label}
+                    {t(`attribute.color.${scheme.key}`)}
                   </span>
                   {isActive && <Check className="size-4" />}
                 </button>
@@ -223,7 +226,7 @@ function AttributeForm({
         </section>
 
         <section className="space-y-3">
-          <SectionLabel>Icon</SectionLabel>
+          <SectionLabel>{t("attribute.icon")}</SectionLabel>
           <div className="grid grid-cols-5 gap-2">
             {attributeIconOptions.map((option) => {
               const isActive = icon === option.key;
@@ -231,7 +234,7 @@ function AttributeForm({
 
               return (
                 <button
-                  aria-label={option.label}
+                  aria-label={t(`attribute.icon.${option.key}`)}
                   className={cn(
                     "flex size-13 items-center justify-center rounded-2xl border border-slate-700/55 bg-[#07111f]/82 text-slate-300 shadow-[inset_0_1px_18px_rgba(99,148,216,0.05)] transition hover:border-[#2f8cff]/60 hover:text-white",
                     isActive &&
@@ -240,7 +243,7 @@ function AttributeForm({
                   disabled={isSaving}
                   key={option.key}
                   onClick={() => setIcon(option.key)}
-                  title={option.label}
+                  title={t(`attribute.icon.${option.key}`)}
                   type="button"
                 >
                   <Icon className="size-5" />
@@ -263,10 +266,10 @@ function AttributeForm({
         >
           {isEditing ? <Save className="size-5" /> : <Plus className="size-5" />}
           {isSaving
-            ? "Saving..."
+            ? t("action.saving")
             : isEditing
-              ? "Save Attribute"
-              : "Create Attribute"}
+              ? t("action.saveAttribute")
+              : t("action.createAttribute")}
         </Button>
       </form>
     </main>
@@ -274,6 +277,8 @@ function AttributeForm({
 }
 
 function Header({ title }: { title: string }) {
+  const { t } = useI18n();
+
   return (
     <header className="flex items-center justify-between gap-3 pt-2">
       <Button
@@ -282,13 +287,13 @@ function Header({ title }: { title: string }) {
         size="icon"
         variant="ghost"
       >
-        <Link aria-label="Back to attributes" href="/attributes">
+        <Link aria-label={t("action.backAttributes")} href="/attributes">
           <ArrowLeft className="size-5" />
         </Link>
       </Button>
 
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-[#3d87ff]">Custom Attribute</p>
+        <p className="text-sm font-medium text-[#3d87ff]">{t("attribute.customAttribute")}</p>
         <h1 className="truncate text-2xl font-semibold leading-none tracking-[-0.03em] text-white">
           {title}
         </h1>

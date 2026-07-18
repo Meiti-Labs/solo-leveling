@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { rewardService } from "@/lib/game";
 import type { Currency, StoreReward } from "@/lib/indexed-db/types";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type RewardKind = StoreReward["kind"];
@@ -36,39 +37,40 @@ const initialFormState: FormState = {
 };
 
 const kindOptions: Array<{
-  description: string;
+  descriptionKey: string;
   icon: ReactNode;
-  label: string;
+  labelKey: string;
   value: RewardKind;
 }> = [
   {
-    description: "Movie night, day trip, cheat meal.",
+    descriptionKey: "store.kind.experienceDescription",
     icon: <Sparkles className="size-5" />,
-    label: "Experience",
+    labelKey: "store.kind.experience",
     value: "experience",
   },
   {
-    description: "Gaming session, digital treat, app time.",
+    descriptionKey: "store.kind.digitalDescription",
     icon: <Gamepad2 className="size-5" />,
-    label: "Digital",
+    labelKey: "store.kind.digital",
     value: "digital",
   },
   {
-    description: "Shoes, gear, phone, real-world purchases.",
+    descriptionKey: "store.kind.physicalDescription",
     icon: <Shirt className="size-5" />,
-    label: "Physical",
+    labelKey: "store.kind.physical",
     value: "physical",
   },
   {
-    description: "Anything personal that does not fit above.",
+    descriptionKey: "store.kind.customDescription",
     icon: <Gift className="size-5" />,
-    label: "Custom",
+    labelKey: "store.kind.custom",
     value: "custom",
   },
 ];
 
 export default function CreateRewardPage() {
   const router = useRouter();
+  const { t } = useI18n();
   const [form, setForm] = useState<FormState>(initialFormState);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -89,12 +91,12 @@ export default function CreateRewardPage() {
     const cost = parsePositiveNumber(form.cost);
 
     if (!title) {
-      setError("Give the reward a title.");
+      setError(t("error.rewardTitleRequired"));
       return;
     }
 
     if (!cost || cost <= 0) {
-      setError("Reward cost should be greater than zero.");
+      setError(t("error.rewardCostRequired"));
       return;
     }
 
@@ -112,7 +114,7 @@ export default function CreateRewardPage() {
       setError(
         caughtError instanceof Error
           ? caughtError.message
-          : "Could not create this reward.",
+          : t("error.createReward"),
       );
     } finally {
       setIsSaving(false);
@@ -128,44 +130,44 @@ export default function CreateRewardPage() {
           size="icon"
           variant="ghost"
         >
-          <Link aria-label="Back to store" href="/store">
+          <Link aria-label={t("action.backStore")} href="/store">
             <ArrowLeft className="size-5" />
           </Link>
         </Button>
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-[#3d87ff]">New Reward</p>
+          <p className="text-sm font-medium text-[#3d87ff]">{t("store.newReward")}</p>
           <h1 className="truncate text-2xl font-semibold leading-none tracking-[-0.03em] text-white">
-            Custom Reward
+            {t("store.customReward")}
           </h1>
         </div>
       </header>
 
       <form className="space-y-4" onSubmit={createReward}>
         <section className="space-y-3 rounded-2xl border border-slate-700/55 bg-[#07111f]/82 p-4 shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(99,148,216,0.06)] backdrop-blur-xl">
-          <LabeledField label="Reward title">
+          <LabeledField label={t("store.rewardTitle")}>
             <input
               className={inputClassName}
               onChange={(event) => updateField("title", event.target.value)}
-              placeholder="Movie Night"
+              placeholder={t("store.rewardTitlePlaceholder")}
               value={form.title}
             />
           </LabeledField>
 
-          <LabeledField label="Description">
+          <LabeledField label={t("quest.description")}>
             <textarea
               className={cn(inputClassName, "min-h-20 resize-none py-2")}
               onChange={(event) =>
                 updateField("description", event.target.value)
               }
-              placeholder="What are you allowed to enjoy?"
+              placeholder={t("store.rewardDescriptionPlaceholder")}
               value={form.description}
             />
           </LabeledField>
         </section>
 
         <section className="space-y-3">
-          <SectionLabel>Reward Type</SectionLabel>
+          <SectionLabel>{t("store.rewardType")}</SectionLabel>
           <div className="grid grid-cols-2 gap-2">
             {kindOptions.map((option) => {
               const isActive = form.kind === option.value;
@@ -184,14 +186,14 @@ export default function CreateRewardPage() {
                 >
                   <span className="flex items-center gap-2 text-base font-semibold text-white">
                     {option.icon}
-                    {option.label}
+                    {t(option.labelKey)}
                   </span>
                   <span className="mt-1 block text-[11px] leading-snug text-slate-300">
-                    {option.description}
+                    {t(option.descriptionKey)}
                   </span>
                   <span className="mt-2 flex items-center gap-1 text-xs font-semibold text-slate-200">
                     <CurrencyIcon currency={optionCurrency} />
-                    {optionCurrency}
+                    {t(optionCurrency === "coins" ? "common.coins" : "common.gems")}
                   </span>
                 </button>
               );
@@ -200,7 +202,11 @@ export default function CreateRewardPage() {
         </section>
 
         <section className="space-y-3 rounded-2xl border border-slate-700/55 bg-[#07111f]/82 p-4 shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(99,148,216,0.06)] backdrop-blur-xl">
-          <LabeledField label={`Cost in ${currency}`}>
+          <LabeledField
+            label={t("store.costInCurrency", {
+              currency: t(currency === "coins" ? "common.coins" : "common.gems"),
+            })}
+          >
             <div className="relative">
               <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
                 <CurrencyIcon currency={currency} />
@@ -215,9 +221,7 @@ export default function CreateRewardPage() {
           </LabeledField>
 
           <p className="text-xs leading-relaxed text-slate-400">
-            Physical rewards spend coins. Experience, digital, and custom
-            rewards spend gems so real-world purchases stay separate from small
-            personal treats.
+            {t("store.currencyHelp")}
           </p>
         </section>
 
@@ -233,7 +237,7 @@ export default function CreateRewardPage() {
           type="submit"
         >
           <Plus className="size-5" />
-          {isSaving ? "Creating..." : "Create Reward"}
+          {isSaving ? t("action.creating") : t("action.createReward")}
         </Button>
       </form>
     </main>

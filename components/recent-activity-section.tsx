@@ -184,7 +184,7 @@ function formatActivityDelta(
   if (xpDelta !== 0) {
     return {
       isNegative: xpDelta < 0,
-      label: `${xpDelta > 0 ? "+" : "-"}${formatNumber(Math.abs(xpDelta))} XP`,
+      label: `${xpDelta > 0 ? "+" : "-"}${formatNumber(Math.abs(xpDelta))} ${t("common.xp")}`,
     };
   }
 

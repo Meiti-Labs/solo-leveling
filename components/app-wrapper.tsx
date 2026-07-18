@@ -1,9 +1,9 @@
 "use client";
 
 import { useRawInitData } from "@telegram-apps/sdk-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import BottomNavigation from "@/components/bottom-navigation";
-import { I18nProvider } from "@/lib/i18n";
+import { I18nProvider, useI18n } from "@/lib/i18n";
 import { gameService } from "@/lib/game";
 
 type TelegramInitUser = {
@@ -53,29 +53,75 @@ export default function AppProvider({
 }) {
   const rawInitData = useRawInitData();
 
+  return (
+    <I18nProvider>
+      <BootstrappedApp rawInitData={rawInitData}>{children}</BootstrappedApp>
+    </I18nProvider>
+  );
+}
+
+function BootstrappedApp({
+  children,
+  rawInitData,
+}: {
+  children: React.ReactNode;
+  rawInitData?: string;
+}) {
+  const { hasLanguagePreference, isLoadingLanguage, language } = useI18n();
+  const [hasBooted, setHasBooted] = useState(false);
+
   useEffect(() => {
     if (rawInitData) {
       localStorage.setItem("tma", rawInitData);
     }
+  }, [rawInitData]);
+
+  useEffect(() => {
+    if (isLoadingLanguage || !hasLanguagePreference || hasBooted) {
+      return;
+    }
+
+    let isActive = true;
 
     async function bootLocalGame() {
-      await gameService.initialize(parseTelegramUser(rawInitData));
+      await gameService.initialize(parseTelegramUser(rawInitData), language);
       await gameService.applyMissedDailyPenalties();
       await gameService.evaluateBossDeadlines();
       await gameService.evaluateAvoidanceDeadlines();
     }
 
-    bootLocalGame().catch((error) => {
-      console.error("Failed to initialize local game data", error);
-    });
-  }, [rawInitData]);
+    bootLocalGame()
+      .then(() => {
+        if (isActive) {
+          setHasBooted(true);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to initialize local game data", error);
+        if (isActive) {
+          setHasBooted(true);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    hasBooted,
+    hasLanguagePreference,
+    isLoadingLanguage,
+    language,
+    rawInitData,
+  ]);
+
+  if (isLoadingLanguage || !hasLanguagePreference || !hasBooted) {
+    return <div className="min-h-svh bg-background" />;
+  }
 
   return (
-    <I18nProvider>
-      <div className="min-h-svh bg-background pb-28 text-foreground">
-        {children}
-        <BottomNavigation />
-      </div>
-    </I18nProvider>
+    <div className="min-h-svh bg-background pb-28 text-foreground">
+      {children}
+      <BottomNavigation />
+    </div>
   );
 }

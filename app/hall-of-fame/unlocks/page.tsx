@@ -6,16 +6,15 @@ import { ArrowLeft, Check, CircleDollarSign, Gem, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { buildAchievementViews } from "@/lib/game/achievement-view";
 import type { AchievementView } from "@/lib/game/achievement-view";
+import { translateGameText, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useGameSnapshot } from "@/hooks/use-game-snapshot";
 
 const fallbackMedal = "/images/medals/star-shield-medal.png";
 
-const formatNumber = (value: number) =>
-  new Intl.NumberFormat("en-US").format(value);
-
 export default function HallOfFameUnlocksPage() {
   const { error, isLoading, snapshot } = useGameSnapshot();
+  const { formatNumber, t } = useI18n();
 
   if (isLoading) {
     return (
@@ -36,7 +35,7 @@ export default function HallOfFameUnlocksPage() {
       <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-3 px-3 py-4">
         <Header />
         <section className="rounded-xl border border-rose-500/50 bg-rose-950/20 p-4 text-sm text-rose-100">
-          Could not load achievements. {error?.message}
+          {t("error.loadAchievements", { message: error?.message ?? "" })}
         </section>
       </main>
     );
@@ -46,22 +45,24 @@ export default function HallOfFameUnlocksPage() {
   const unlockedCount = achievements.filter(
     (achievement) => achievement.isUnlocked,
   ).length;
+  const completePercent = achievements.length
+    ? Math.round((unlockedCount / achievements.length) * 100)
+    : 0;
 
   return (
     <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
       <Header />
 
       <section className="rounded-2xl border border-[#2f8cff]/45 bg-[#07111f]/82 p-4 shadow-[0_0_26px_rgba(47,140,255,0.16),inset_0_1px_18px_rgba(99,148,216,0.08)]">
-        <p className="text-sm text-slate-400">Unlocked</p>
+        <p className="text-sm text-slate-400">{t("hall.unlocked")}</p>
         <div className="mt-1 flex items-end justify-between gap-3">
           <p className="text-3xl font-semibold leading-none text-white">
-            {unlockedCount}/{achievements.length}
+            {formatNumber(unlockedCount)}/{formatNumber(achievements.length)}
           </p>
           <p className="text-sm font-medium text-[#4f8cff]">
-            {achievements.length
-              ? Math.round((unlockedCount / achievements.length) * 100)
-              : 0}
-            % complete
+            {t("hall.completePercent", {
+              percent: formatNumber(completePercent),
+            })}
           </p>
         </div>
       </section>
@@ -76,6 +77,8 @@ export default function HallOfFameUnlocksPage() {
 }
 
 function Header() {
+  const { t } = useI18n();
+
   return (
     <header className="flex items-center gap-3 pt-2">
       <Button
@@ -84,14 +87,14 @@ function Header() {
         size="icon"
         variant="ghost"
       >
-        <Link aria-label="Back to Hall of Fame" href="/hall-of-fame">
+        <Link aria-label={t("action.backHallOfFame")} href="/hall-of-fame">
           <ArrowLeft className="size-5" />
         </Link>
       </Button>
       <div>
-        <p className="text-sm font-medium text-[#3d87ff]">Hall of Fame</p>
+        <p className="text-sm font-medium text-[#3d87ff]">{t("common.hallOfFame")}</p>
         <h1 className="text-3xl font-semibold leading-none tracking-[-0.03em] text-white">
-          Unlocks
+          {t("hall.unlocks")}
         </h1>
       </div>
     </header>
@@ -99,6 +102,12 @@ function Header() {
 }
 
 function AchievementRow({ achievement }: { achievement: AchievementView }) {
+  const { formatNumber, language, t } = useI18n();
+  const title = translateGameText(achievement.title, language) ?? achievement.title;
+  const description =
+    translateGameText(achievement.description, language) ??
+    achievement.description;
+
   return (
     <article
       className={cn(
@@ -108,7 +117,7 @@ function AchievementRow({ achievement }: { achievement: AchievementView }) {
     >
       <div className="relative aspect-square overflow-hidden rounded-xl border border-[#2f8cff]/20 bg-blue-950/20">
         <Image
-          alt={`${achievement.title} medal`}
+          alt={t("hall.medalAlt", { title })}
           className={cn(
             "object-contain p-1 drop-shadow-[0_0_14px_rgba(245,158,11,0.35)]",
             !achievement.isUnlocked && "grayscale opacity-45",
@@ -123,10 +132,10 @@ function AchievementRow({ achievement }: { achievement: AchievementView }) {
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <h2 className="truncate text-base font-semibold text-white">
-              {achievement.title}
+              {title}
             </h2>
             <p className="truncate text-sm text-slate-400">
-              {achievement.description}
+              {description}
             </p>
           </div>
           <StatusBadge isUnlocked={achievement.isUnlocked} />

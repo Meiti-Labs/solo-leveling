@@ -116,7 +116,7 @@ export default function AnalyticsScreen() {
           title={t("common.analytics")}
         />
         <section className="rounded-xl border border-rose-500/50 bg-rose-950/20 p-4 text-sm text-rose-100">
-          Could not load analytics. {error?.message}
+          {t("analytics.loadError", { message: error?.message ?? "" })}
         </section>
       </main>
     );
@@ -229,7 +229,7 @@ function XpGrowthCard({
         </div>
         <div className="shrink-0 text-right">
           <p className="text-2xl font-semibold text-white">
-            {formatNumber(totalXp)} XP
+            {formatNumber(totalXp)} {t("common.xp")}
           </p>
           <p className="mt-1 text-xs font-medium text-slate-400">{periodLabel}</p>
         </div>
@@ -241,6 +241,7 @@ function XpGrowthCard({
 }
 
 function LineChart({ points: sourcePoints }: { points: ChartPoint[] }) {
+  const { formatNumber, t } = useI18n();
   const width = 360;
   const height = 190;
   const padding = { top: 10, right: 12, bottom: 30, left: 38 };
@@ -272,7 +273,7 @@ function LineChart({ points: sourcePoints }: { points: ChartPoint[] }) {
 
   return (
     <svg
-      aria-label="XP growth line chart"
+      aria-label={t("analytics.xpGrowthChart")}
       className="h-auto w-full overflow-visible"
       role="img"
       viewBox={`0 0 ${width} ${height}`}
@@ -297,7 +298,7 @@ function LineChart({ points: sourcePoints }: { points: ChartPoint[] }) {
               x={padding.left - 8}
               y={y + 3}
             >
-              {formatTick(tick)}
+              {formatNumber(tick)}
             </text>
             <line
               stroke="#334155"
@@ -364,6 +365,7 @@ function CategoryGrowthCard({
 }
 
 function RadarChart({ points }: { points: RadarPoint[] }) {
+  const { t } = useI18n();
   const width = 340;
   const height = 240;
   const center = { x: 170, y: 126 };
@@ -390,7 +392,7 @@ function RadarChart({ points }: { points: RadarPoint[] }) {
 
   return (
     <svg
-      aria-label="Category growth radar chart"
+      aria-label={t("analytics.categoryGrowthChart")}
       className="h-auto w-full"
       role="img"
       viewBox={`0 0 ${width} ${height}`}
@@ -894,14 +896,6 @@ function formatMonthBucket(
   return formatDate(date, {
     month: "short",
   });
-}
-
-function formatTick(value: number) {
-  if (value >= 1000) {
-    return `${Math.round(value / 1000)}K`;
-  }
-
-  return String(value);
 }
 
 function roundChartMax(value: number) {

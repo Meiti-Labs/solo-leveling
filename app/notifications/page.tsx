@@ -74,7 +74,7 @@ export default function NotificationsPage() {
 
       {error && (
         <p className="rounded-xl border border-rose-500/50 bg-rose-950/25 px-3 py-2 text-sm text-rose-100">
-          Could not load notifications. {error.message}
+          {t("error.loadNotifications", { message: error.message })}
         </p>
       )}
 

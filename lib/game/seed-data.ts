@@ -7,6 +7,8 @@ import type {
 
 const now = () => new Date().toISOString();
 
+type SeedLanguage = "en" | "fa";
+
 export const defaultAttributes: Array<
   Pick<
     AttributeProgress,
@@ -262,6 +264,73 @@ export const defaultAchievements: Array<
   },
 ];
 
+const localizedSeedText: Record<SeedLanguage, Record<string, string>> = {
+  en: {},
+  fa: {
+    "A guilt-free movie and chill night.": "یک شب فیلم و آرامش بدون عذاب وجدان.",
+    "Awakened Hunter": "شکارچی بیدارشده",
+    "Boss Breaker": "شکننده باس",
+    "Cheat Meal": "وعده آزاد",
+    "Communication": "ارتباطات",
+    "Complete 20 boss quests.": "۲۰ ماموریت باس را کامل کن.",
+    "Defeat the boss that holds you back.": "باسی را شکست بده که عقب نگهت داشته.",
+    "Discipline": "نظم",
+    "Enjoy your favorite meal.": "غذای محبوبت را با خیال راحت بخور.",
+    "Finance": "مالی",
+    "Gym Gear": "وسایل باشگاه",
+    "Inner Procrastination": "اهمال‌کاری درونی",
+    "Intelligence": "هوش",
+    "Keep a 100 day streak.": "یک رشته ۱۰۰ روزه را حفظ کن.",
+    "Legendary Year": "سال افسانه‌ای",
+    "Morning Workout": "تمرین صبحگاهی",
+    "Move your body before the day steals your attention.": "قبل از اینکه روز تمرکزت را بدزدد، بدنت را حرکت بده.",
+    "Movie Night": "شب فیلم",
+    "New Shoes": "کفش نو",
+    "No Sugar Day": "روز بدون شکر",
+    "Protect your discipline with one clean day.": "با یک روز پاک، نظمت را حفظ کن.",
+    "Put money aside instead of spending on impulse.": "به‌جای خرج ناگهانی، پول کنار بگذار.",
+    "Reach level 100 with no XP loss.": "بدون از دست دادن XP به سطح ۱۰۰ برس.",
+    "Reach overall level 25.": "به سطح کلی ۲۵ برس.",
+    "Read 20 Pages": "مطالعه ۲۰ صفحه",
+    "Real-world gear bought with earned coins.": "وسیله واقعی که با سکه‌های کسب‌شده خریده می‌شود.",
+    "Save $20": "پس‌انداز ۲۰ دلار",
+    "Strength": "قدرت",
+    "Train your mind with a focused reading block.": "ذهنت را با یک بازه مطالعه متمرکز تمرین بده.",
+    "Unbroken Flame": "شعله نشکسته",
+    "Upgrade the equipment that supports your discipline.": "تجهیزاتی را ارتقا بده که از نظمت پشتیبانی می‌کند.",
+    "Wisdom": "خرد",
+  },
+};
+
+export function getSeedData(language?: string) {
+  const seedLanguage = resolveSeedLanguage(language);
+
+  return {
+    defaultAchievements: defaultAchievements.map((achievement) => ({
+      ...achievement,
+      description: translateRequiredSeedText(
+        achievement.description,
+        seedLanguage,
+      ),
+      title: translateRequiredSeedText(achievement.title, seedLanguage),
+    })),
+    defaultAttributes: defaultAttributes.map((attribute) => ({
+      ...attribute,
+      label: translateRequiredSeedText(attribute.label, seedLanguage),
+    })),
+    defaultRewards: defaultRewards.map((reward) => ({
+      ...reward,
+      description: translateSeedText(reward.description, seedLanguage),
+      title: translateRequiredSeedText(reward.title, seedLanguage),
+    })),
+    defaultTasks: defaultTasks.map((task) => ({
+      ...task,
+      description: translateSeedText(task.description, seedLanguage),
+      title: translateRequiredSeedText(task.title, seedLanguage),
+    })),
+  };
+}
+
 export function withTimestamps<T extends { id: string }>(
   entity: T,
 ): T & { createdAt: string; updatedAt: string } {
@@ -271,4 +340,20 @@ export function withTimestamps<T extends { id: string }>(
     createdAt: timestamp,
     updatedAt: timestamp,
   };
+}
+
+function resolveSeedLanguage(language?: string): SeedLanguage {
+  return language === "fa" ? "fa" : "en";
+}
+
+function translateSeedText(value: string | undefined, language: SeedLanguage) {
+  if (!value || language === "en") {
+    return value;
+  }
+
+  return localizedSeedText[language][value] ?? value;
+}
+
+function translateRequiredSeedText(value: string, language: SeedLanguage) {
+  return translateSeedText(value, language) ?? value;
 }

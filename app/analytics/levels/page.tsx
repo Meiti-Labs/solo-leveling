@@ -8,6 +8,7 @@ import {
   totalXpRequiredForLevel,
   xpRequiredForNextLevel,
 } from "@/lib/game";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const MAX_ROADMAP_LEVEL = 200;
@@ -23,11 +24,9 @@ type LevelMilestone = {
   x: number;
 };
 
-const formatNumber = (value: number) =>
-  new Intl.NumberFormat("en-US").format(value);
-
 export default function LevelRoadmapPage() {
   const { error, isLoading, snapshot } = useGameSnapshot();
+  const { formatNumber, t } = useI18n();
 
   if (isLoading) {
     return (
@@ -43,7 +42,7 @@ export default function LevelRoadmapPage() {
       <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
         <RoadmapHeader />
         <section className="rounded-xl border border-rose-500/50 bg-rose-950/20 p-4 text-sm text-rose-100">
-          Could not load level roadmap. {error?.message}
+          {t("error.loadLevelRoadmap", { message: error?.message ?? "" })}
         </section>
       </main>
     );
@@ -61,19 +60,28 @@ export default function LevelRoadmapPage() {
       <RoadmapHeader />
 
       <section className="grid grid-cols-3 gap-2">
-        <SummaryTile label="Current" value={`Lv. ${projectedLevel}`} />
-        <SummaryTile label="Progress" value={`${progressPercent}%`} />
-        <SummaryTile label="To Lv. 200" value={formatNumber(xpForLevel200)} />
+        <SummaryTile
+          label={t("level.current")}
+          value={t("level.shortValue", { level: formatNumber(projectedLevel) })}
+        />
+        <SummaryTile
+          label={t("level.progress")}
+          value={`${formatNumber(progressPercent)}%`}
+        />
+        <SummaryTile
+          label={t("level.toMax", { level: formatNumber(MAX_ROADMAP_LEVEL) })}
+          value={formatNumber(xpForLevel200)}
+        />
       </section>
 
       <section className="space-y-3 rounded-2xl border border-slate-700/55 bg-[#07111f]/82 p-4 shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(99,148,216,0.06)]">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-xl font-semibold text-white">
-              Level 1-200 Roadmap
+              {t("level.roadmapFull")}
             </h2>
             <p className="mt-1 text-sm text-slate-400">
-              Scroll sideways to inspect every level threshold.
+              {t("level.roadmapHint")}
             </p>
           </div>
           <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-[#2f8cff]/35 bg-blue-950/25 text-[#78b4ff]">
@@ -98,7 +106,7 @@ export default function LevelRoadmapPage() {
             >
               <div className="flex flex-col items-center">
                 <span className="rounded-full border border-[#2f8cff]/60 bg-blue-950 px-3 py-1 text-xs font-semibold text-[#78b4ff] shadow-[0_0_18px_rgba(47,140,255,0.45)]">
-                  You · Lv. {projectedLevel}
+                  {t("level.you", { level: formatNumber(projectedLevel) })}
                 </span>
                 <div className="h-[4.6rem] w-px bg-[#5aa0ff]" />
                 <div className="size-4 rounded-full border-2 border-white bg-[#2f8cff] shadow-[0_0_18px_rgba(47,140,255,0.8)]" />
@@ -119,6 +127,8 @@ export default function LevelRoadmapPage() {
 }
 
 function RoadmapHeader() {
+  const { t } = useI18n();
+
   return (
     <header className="flex items-center gap-3 pt-1">
       <Button
@@ -127,16 +137,16 @@ function RoadmapHeader() {
         size="icon"
         variant="ghost"
       >
-        <Link aria-label="Back to analytics" href="/analytics">
+        <Link aria-label={t("action.backAnalytics")} href="/analytics">
           <ArrowLeft className="size-5" />
         </Link>
       </Button>
       <div className="min-w-0">
         <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#5aa0ff]">
-          Analytics
+          {t("common.analytics")}
         </p>
         <h1 className="truncate text-2xl font-semibold leading-none tracking-[-0.03em] text-white">
-          Level Roadmap
+          {t("analytics.levelRoadmap")}
         </h1>
       </div>
     </header>
@@ -155,6 +165,7 @@ function SummaryTile({ label, value }: { label: string; value: string }) {
 }
 
 function MilestoneMarker({ milestone }: { milestone: LevelMilestone }) {
+  const { formatNumber, t } = useI18n();
   const isMajor =
     milestone.level % 10 === 0 ||
     milestone.level === 1 ||
@@ -179,7 +190,7 @@ function MilestoneMarker({ milestone }: { milestone: LevelMilestone }) {
         >
           {isMajor ? (
             <span className="text-[10px] font-semibold">
-              {milestone.level}
+              {formatNumber(milestone.level)}
             </span>
           ) : null}
         </div>
@@ -193,13 +204,17 @@ function MilestoneMarker({ milestone }: { milestone: LevelMilestone }) {
         {isMajor && (
           <div className="w-28 rounded-xl border border-slate-700/60 bg-[#030914]/85 p-2 text-center shadow-[0_8px_22px_rgba(0,0,0,0.25)]">
             <p className="text-xs font-semibold text-white">
-              Lv. {milestone.level}
+              {t("level.shortValue", { level: formatNumber(milestone.level) })}
             </p>
             <p className="mt-0.5 text-[10px] leading-tight text-slate-400">
-              {formatNumber(milestone.totalXp)} total XP
+              {t("level.totalXp", {
+                xp: formatNumber(milestone.totalXp),
+              })}
             </p>
             <p className="mt-1 text-[10px] uppercase tracking-[0.12em] text-slate-500">
-              Next {formatNumber(milestone.nextLevelXp)} XP
+              {t("level.nextXp", {
+                xp: formatNumber(milestone.nextLevelXp),
+              })}
             </p>
           </div>
         )}

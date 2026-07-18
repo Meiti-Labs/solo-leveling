@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Check, Flame, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toAppDate } from "@/lib/game/date";
+import { translateGameText, useI18n } from "@/lib/i18n";
 import type {
   ActivityEvent,
   AppDate,
@@ -34,11 +35,15 @@ type CalendarDay = {
   endsCurrentStreak: boolean;
 };
 
-const weekdayLabels = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-const monthFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "long",
-  year: "numeric",
-});
+const weekdayLabelKeys = [
+  "settings.weekday.sun",
+  "settings.weekday.mon",
+  "settings.weekday.tue",
+  "settings.weekday.wed",
+  "settings.weekday.thu",
+  "settings.weekday.fri",
+  "settings.weekday.sat",
+];
 
 export default function TaskStreakCalendar({
   activityEvents,
@@ -46,6 +51,7 @@ export default function TaskStreakCalendar({
   task,
   weeklyOffDay,
 }: TaskStreakCalendarProps) {
+  const { formatDate, formatNumber, language, t } = useI18n();
   const today = toAppDate();
   const [visibleMonth, setVisibleMonth] = useState(() =>
     getMonthStart(fromAppDate(today)),
@@ -79,15 +85,15 @@ export default function TaskStreakCalendar({
       <div className="relative space-y-5">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-sm font-medium text-amber-300">Streak Calendar</p>
+            <p className="text-sm font-medium text-amber-300">{t("streak.calendar")}</p>
             <h2 className="mt-1 truncate text-2xl font-semibold leading-none text-white">
-              {task.title}
+              {translateGameText(task.title, language) ?? task.title}
             </h2>
           </div>
           <div className="flex shrink-0 items-center gap-2 rounded-full border border-amber-400/35 bg-amber-950/20 px-3 py-1.5 text-amber-200 shadow-[0_0_18px_rgba(245,158,11,0.18)]">
             <Flame className="size-5 fill-amber-300/25" />
             <span className="text-lg font-semibold">
-              {calendarData.currentStreak}
+              {formatNumber(calendarData.currentStreak)}
             </span>
           </div>
         </div>
@@ -95,7 +101,7 @@ export default function TaskStreakCalendar({
         <div className="rounded-[1.35rem] border border-[#2f8cff]/35 bg-[#07111f]/72 p-3 shadow-[inset_0_1px_18px_rgba(99,148,216,0.08)]">
           <div className="mb-4 flex items-center justify-between gap-3">
             <Button
-              aria-label="Previous month"
+              aria-label={t("action.previousMonth")}
               className="size-10 rounded-full border border-slate-700/70 bg-slate-950/40 text-slate-200 hover:border-[#2f8cff]/55 hover:bg-blue-950/30"
               onClick={() => moveMonth(-1)}
               size="icon"
@@ -105,10 +111,13 @@ export default function TaskStreakCalendar({
               <ChevronLeft className="size-5" />
             </Button>
             <h3 className="truncate text-xl font-semibold text-white">
-              {monthFormatter.format(visibleMonth)}
+              {formatDate(visibleMonth, {
+                month: "long",
+                year: "numeric",
+              })}
             </h3>
             <Button
-              aria-label="Next month"
+              aria-label={t("action.nextMonth")}
               className="size-10 rounded-full border border-slate-700/70 bg-slate-950/40 text-slate-200 hover:border-[#2f8cff]/55 hover:bg-blue-950/30"
               onClick={() => moveMonth(1)}
               size="icon"
@@ -120,12 +129,12 @@ export default function TaskStreakCalendar({
           </div>
 
           <div className="grid grid-cols-7 gap-y-2">
-            {weekdayLabels.map((label) => (
+            {weekdayLabelKeys.map((labelKey) => (
               <div
                 className="text-center text-sm font-semibold text-slate-400"
-                key={label}
+                key={labelKey}
               >
-                {label}
+                {t(labelKey)}
               </div>
             ))}
 
@@ -142,13 +151,13 @@ export default function TaskStreakCalendar({
                     <Check className="size-3.5 text-amber-100" />
                   </span>
                 }
-                label="Completed"
+                label={t("streak.completed")}
               />
               <LegendItem
                 icon={
                   <span className="h-4 w-9 rounded-full bg-gradient-to-r from-amber-400 to-yellow-300 shadow-[0_0_14px_rgba(245,158,11,0.42)]" />
                 }
-                label="Current"
+                label={t("streak.current")}
               />
               <LegendItem
                 icon={
@@ -156,7 +165,7 @@ export default function TaskStreakCalendar({
                     <X className="size-3.5 text-rose-300" />
                   </span>
                 }
-                label="Missed"
+                label={t("streak.missed")}
               />
             </div>
           </div>
@@ -171,12 +180,14 @@ export default function TaskStreakCalendar({
             <div className="h-px flex-1 bg-gradient-to-l from-transparent to-[#2f8cff]/60" />
           </div>
           <p className="text-2xl font-semibold text-white">
-            {calendarData.currentStreak}-day streak
+            {t("streak.value", {
+              count: formatNumber(calendarData.currentStreak),
+            })}
           </p>
           <p className="text-sm text-slate-400">
             {calendarData.currentStreak > 0
-              ? "Keep the chain alive."
-              : "Complete this quest to start the chain."}
+              ? t("streak.keepAlive")
+              : t("streak.startChain")}
           </p>
         </div>
       </div>
@@ -185,6 +196,8 @@ export default function TaskStreakCalendar({
 }
 
 function CalendarCell({ day }: { day: CalendarDay }) {
+  const { formatNumber } = useI18n();
+
   if (!day.isCurrentMonth) {
     return <div className="h-12" />;
   }
@@ -223,7 +236,7 @@ function CalendarCell({ day }: { day: CalendarDay }) {
         {day.isMissed && !day.isCompleted ? (
           <X className="size-4" />
         ) : (
-          day.dayNumber
+          formatNumber(day.dayNumber)
         )}
       </span>
     </div>

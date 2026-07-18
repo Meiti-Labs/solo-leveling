@@ -126,7 +126,7 @@ export default function SettingsPage() {
       setNotice(
         caughtError instanceof Error
           ? caughtError.message
-          : "Could not update weekly off day.",
+          : t("error.updateOffDay"),
       );
     } finally {
       setIsSavingOffDay(false);
@@ -153,7 +153,7 @@ export default function SettingsPage() {
       setNotice(
         caughtError instanceof Error
           ? caughtError.message
-          : "Could not export local data.",
+          : t("error.exportData"),
       );
     }
   }
@@ -166,7 +166,7 @@ export default function SettingsPage() {
 
     try {
       setIsResetting(true);
-      await gameService.resetLocalGameData();
+      await gameService.resetLocalGameData(language);
       await refresh();
       setResetText("");
       setNotificationPreferences(normalizeNotificationPreferences());
@@ -175,7 +175,7 @@ export default function SettingsPage() {
       setNotice(
         caughtError instanceof Error
           ? caughtError.message
-          : "Could not reset local game data.",
+          : t("error.resetData"),
       );
     } finally {
       setIsResetting(false);
@@ -205,7 +205,7 @@ export default function SettingsPage() {
       setNotice(
         caughtError instanceof Error
           ? caughtError.message
-          : "Could not save notification preferences.",
+          : t("error.saveNotifications"),
       );
     } finally {
       setSavingNotificationKey(null);
@@ -273,7 +273,7 @@ export default function SettingsPage() {
                     setNotice(
                       caughtError instanceof Error
                         ? caughtError.message
-                        : "Could not save language.",
+                        : t("error.saveLanguage"),
                     );
                   });
                 }}
@@ -439,11 +439,13 @@ function SectionTitle({
 }
 
 function SummaryCard({ label, value }: { label: string; value: number }) {
+  const { formatNumber } = useI18n();
+
   return (
     <article className="rounded-xl border border-slate-700/55 bg-[#07111f]/82 p-3 shadow-[0_8px_22px_rgba(0,0,0,0.24),inset_0_1px_16px_rgba(99,148,216,0.05)]">
       <p className="truncate text-xs text-slate-400">{label}</p>
       <p className="mt-1 text-2xl font-semibold leading-none text-white">
-        {value}
+        {formatNumber(value)}
       </p>
     </article>
   );

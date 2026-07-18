@@ -33,7 +33,7 @@ export default function LevelProgressCard({
       <div className="relative grid grid-cols-[5.75rem_minmax(0,1fr)] items-center gap-3 sm:grid-cols-[7rem_minmax(0,1fr)] sm:gap-5">
         <div className="relative aspect-square w-full shrink-0">
           <Image
-            alt={`Level ${progress.level} badge`}
+            alt={t("level.badgeAlt", { level: formatNumber(progress.level) })}
             className="object-contain drop-shadow-[0_0_18px_rgba(47,128,255,0.5)]"
             fill
             sizes="(min-width: 640px) 112px, 92px"
@@ -44,7 +44,7 @@ export default function LevelProgressCard({
               {t("level.label")}
             </span>
             <span className="text-xl font-semibold leading-none text-white drop-shadow-[0_0_12px_rgba(92,160,255,0.95)] sm:text-6xl">
-              {progress.level}
+              {formatNumber(progress.level)}
             </span>
           </div>
         </div>
@@ -55,7 +55,7 @@ export default function LevelProgressCard({
               {t("home.xpProgress")}
             </h2>
             <span className="shrink-0 text-lg  text-white sm:text-xl">
-              {percent}%
+              {formatNumber(percent)}%
             </span>
           </div>
 
@@ -80,7 +80,7 @@ export default function LevelProgressCard({
                   <span className="font-semibold text-[#3d87ff]">
                     {formatNumber(progress.xpIntoLevel)}
                   </span>{" "}
-                  / {formatNumber(progress.xpForNextLevel)} XP
+                  / {formatNumber(progress.xpForNextLevel)} {t("common.xp")}
                 </>
               )}
             </p>

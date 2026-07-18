@@ -21,14 +21,12 @@ import {
 import { fromAppDate, getPreviousAppDate, isOffDay, toAppDate } from "./date";
 import { getLevelProgress } from "./leveling";
 import {
-  defaultAchievements,
-  defaultAttributes,
-  defaultRewards,
-  defaultTasks,
+  getSeedData,
   withTimestamps,
 } from "./seed-data";
 
 const MAIN_PROGRESS_ID = "progress-main";
+const LANGUAGE_SETTING_KEY = "app-language";
 
 type TelegramIdentity = {
   id?: number;
@@ -144,7 +142,9 @@ async function ensureSeeded<T extends { id: string }>(
   }
 }
 
-async function syncDefaultTaskBalancing() {
+async function syncDefaultTaskBalancing(
+  defaultTasks: Array<Omit<TaskDefinition, "createdAt" | "updatedAt">>,
+) {
   const timestamp = now();
 
   for (const defaultTask of defaultTasks) {
@@ -503,8 +503,9 @@ async function completeAvoidanceDeadline(
 }
 
 export const gameService = {
-  async initialize(identity?: TelegramIdentity) {
+  async initialize(identity?: TelegramIdentity, seedLanguage?: string) {
     const timestamp = now();
+    const seedData = getSeedData(seedLanguage ?? identity?.language_code);
     const profileId = await getProfileId(identity);
     const existingProfile = await db.profiles.get(profileId);
     const profile: UserProfile = {
@@ -523,23 +524,23 @@ export const gameService = {
     await db.profiles.put(profile);
     await getOrCreateProgress(profile.id);
     await ensureSeeded(
-      defaultAttributes,
+      seedData.defaultAttributes,
       (id) => db.attributeProgress.get(id),
       (item) => db.attributeProgress.put(item),
     );
     await ensureSeeded(
-      defaultTasks,
+      seedData.defaultTasks,
       (id) => db.tasks.get(id),
       (item) => db.tasks.put(item),
     );
-    await syncDefaultTaskBalancing();
+    await syncDefaultTaskBalancing(seedData.defaultTasks);
     await ensureSeeded(
-      defaultRewards,
+      seedData.defaultRewards,
       (id) => db.rewards.get(id),
       (item) => db.rewards.put(item),
     );
     await ensureSeeded(
-      defaultAchievements,
+      seedData.defaultAchievements,
       (id) => db.achievementDefinitions.get(id),
       (item) => db.achievementDefinitions.put(item),
     );
@@ -1230,7 +1231,14 @@ export const gameService = {
     };
   },
 
-  async resetLocalGameData() {
+  async resetLocalGameData(seedLanguage?: string) {
+    const existingLanguage = await db.settings.get(LANGUAGE_SETTING_KEY);
+    const nextSeedLanguage =
+      seedLanguage ??
+      (typeof existingLanguage?.value === "string"
+        ? existingLanguage.value
+        : undefined);
+
     await db.userProgress.clear();
     await db.attributeProgress.clear();
     await db.tasks.clear();
@@ -1244,6 +1252,14 @@ export const gameService = {
     await db.notifications.clear();
     await db.settings.clear();
 
-    return this.initialize();
+    if (nextSeedLanguage) {
+      await db.settings.put({
+        key: LANGUAGE_SETTING_KEY,
+        value: nextSeedLanguage,
+        updatedAt: now(),
+      });
+    }
+
+    return this.initialize(undefined, nextSeedLanguage);
   },
 };

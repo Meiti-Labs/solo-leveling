@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { TaskCompletion, TaskDefinition } from "@/lib/indexed-db/types";
+import { translateGameText, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useGameSnapshot } from "@/hooks/use-game-snapshot";
 
@@ -20,11 +21,9 @@ type HistoryItem = TaskCompletion & {
   task?: TaskDefinition;
 };
 
-const formatNumber = (value: number) =>
-  new Intl.NumberFormat("en-US").format(value);
-
 export default function QuestHistoryPage() {
   const { error, isLoading, snapshot } = useGameSnapshot();
+  const { t } = useI18n();
 
   if (isLoading) {
     return (
@@ -45,7 +44,7 @@ export default function QuestHistoryPage() {
       <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-3 px-3 py-4">
         <Header />
         <section className="rounded-xl border border-rose-500/50 bg-rose-950/20 p-4 text-sm text-rose-100">
-          Could not load quest history. {error?.message}
+          {t("error.loadQuestHistory", { message: error?.message ?? "" })}
         </section>
       </main>
     );
@@ -76,19 +75,19 @@ export default function QuestHistoryPage() {
       <Header />
 
       <section className="grid grid-cols-3 gap-2">
-        <SummaryCard icon={<Zap className="size-4" />} label="XP" value={totalXp} />
+        <SummaryCard icon={<Zap className="size-4" />} label={t("common.xp")} value={totalXp} />
         <SummaryCard
           icon={<CircleDollarSign className="size-4" />}
-          label="Coins"
+          label={t("common.coinsLabel")}
           value={totalCoins}
         />
-        <SummaryCard icon={<Gem className="size-4" />} label="Gems" value={totalGems} />
+        <SummaryCard icon={<Gem className="size-4" />} label={t("common.gemsLabel")} value={totalGems} />
       </section>
 
       <section className="space-y-2">
         {historyItems.length === 0 ? (
           <p className="rounded-xl border border-slate-700/55 bg-[#07111f]/82 p-4 text-sm text-slate-300">
-            No completed quests yet. Finish one and your history will start here.
+            {t("quest.historyEmpty")}
           </p>
         ) : (
           historyItems.map((item) => <HistoryRow item={item} key={item.id} />)
@@ -99,6 +98,8 @@ export default function QuestHistoryPage() {
 }
 
 function Header() {
+  const { t } = useI18n();
+
   return (
     <header className="flex items-center gap-3 pt-2">
       <Button
@@ -107,14 +108,14 @@ function Header() {
         size="icon"
         variant="ghost"
       >
-        <Link aria-label="Back to quests" href="/quests">
+        <Link aria-label={t("action.backQuests")} href="/quests">
           <ArrowLeft className="size-5" />
         </Link>
       </Button>
       <div>
-        <p className="text-sm font-medium text-[#3d87ff]">Quest Log</p>
+        <p className="text-sm font-medium text-[#3d87ff]">{t("quest.log")}</p>
         <h1 className="text-3xl font-semibold leading-none tracking-[-0.03em] text-white">
-          History
+          {t("quest.history")}
         </h1>
       </div>
     </header>
@@ -130,6 +131,8 @@ function SummaryCard({
   label: string;
   value: number;
 }) {
+  const { formatNumber } = useI18n();
+
   return (
     <article className="rounded-xl border border-slate-700/55 bg-[#07111f]/82 p-3 shadow-[0_8px_22px_rgba(0,0,0,0.24),inset_0_1px_16px_rgba(99,148,216,0.05)]">
       <p className="flex items-center gap-1.5 truncate text-xs text-slate-400">
@@ -144,7 +147,10 @@ function SummaryCard({
 }
 
 function HistoryRow({ item }: { item: HistoryItem }) {
-  const taskTitle = item.task?.title ?? "Deleted Quest";
+  const { formatDate, formatNumber, language, t } = useI18n();
+  const taskTitle = item.task
+    ? translateGameText(item.task.title, language) ?? item.task.title
+    : t("quest.deleted");
   const taskKind = item.task?.kind ?? item.taskKind;
   const isBoss = taskKind === "boss";
 
@@ -182,27 +188,30 @@ function HistoryRow({ item }: { item: HistoryItem }) {
             </h2>
             <p className="flex items-center gap-1.5 truncate text-sm text-slate-400">
               <CalendarDays className="size-3.5" />
-              {formatDate(item.completedAt)}
+              {formatQuestHistoryDate(item.completedAt, formatDate, t)}
             </p>
           </div>
           {item.offDayMultiplier > 1 && (
             <span className="shrink-0 rounded-full border border-cyan-400/30 bg-cyan-950/30 px-2 py-1 text-xs font-semibold text-cyan-200">
-              {item.offDayMultiplier}x
+              {formatNumber(item.offDayMultiplier)}x
             </span>
           )}
         </div>
 
         <div className="flex flex-wrap gap-2 text-xs font-semibold">
-          <RewardPill label={`${formatNumber(item.earnedXp)} XP`} tone="blue" />
+          <RewardPill
+            label={`${formatNumber(item.earnedXp)} ${t("common.xp")}`}
+            tone="blue"
+          />
           {item.earnedCoins > 0 && (
             <RewardPill
-              label={`${formatNumber(item.earnedCoins)} coins`}
+              label={`${formatNumber(item.earnedCoins)} ${t("common.coins")}`}
               tone="gold"
             />
           )}
           {item.earnedGems > 0 && (
             <RewardPill
-              label={`${formatNumber(item.earnedGems)} gems`}
+              label={`${formatNumber(item.earnedGems)} ${t("common.gems")}`}
               tone="cyan"
             />
           )}
@@ -232,17 +241,21 @@ function RewardPill({
   );
 }
 
-function formatDate(isoDate: string) {
+function formatQuestHistoryDate(
+  isoDate: string,
+  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string,
+  t: (key: string) => string,
+) {
   const date = new Date(isoDate);
 
   if (Number.isNaN(date.getTime())) {
-    return "Recently";
+    return t("period.recently");
   }
 
-  return new Intl.DateTimeFormat("en-US", {
+  return formatDate(date, {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
     month: "short",
-  }).format(date);
+  });
 }

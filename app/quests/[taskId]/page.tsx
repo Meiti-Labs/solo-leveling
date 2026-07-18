@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { useGameSnapshot } from "@/hooks/use-game-snapshot";
 import { gameService } from "@/lib/game";
 import { toAppDate } from "@/lib/game/date";
+import { translateGameText, useI18n } from "@/lib/i18n";
 import type {
   AttributeKey,
   AttributeProgress,
@@ -33,36 +34,14 @@ import type {
   TaskDifficulty,
   TaskKind,
 } from "@/lib/indexed-db/types";
+import { isCoreAttributeKey } from "@/lib/indexed-db/types";
 import { cn } from "@/lib/utils";
-
-const formatNumber = (value: number) =>
-  new Intl.NumberFormat("en-US").format(value);
-
-const kindLabels: Record<TaskKind, string> = {
-  avoid: "Avoid Quest",
-  boss: "Boss Quest",
-  daily: "Daily Quest",
-  goal: "Goal Quest",
-};
-
-const difficultyLabels: Record<TaskDifficulty, string> = {
-  boss: "Boss",
-  easy: "Easy",
-  hard: "Hard",
-  medium: "Medium",
-};
-
-const statusLabels: Record<TaskDefinition["status"], string> = {
-  active: "Active",
-  archived: "Deleted",
-  completed: "Completed",
-  failed: "Failed",
-};
 
 export default function QuestDetailPage() {
   const params = useParams<{ taskId: string }>();
   const router = useRouter();
   const { error, isLoading, refresh, snapshot } = useGameSnapshot();
+  const { formatDate, formatNumber, language, t } = useI18n();
   const [actionNotice, setActionNotice] = useState<{
     tone: "success" | "error";
     message: string;
@@ -74,7 +53,7 @@ export default function QuestDetailPage() {
   if (isLoading) {
     return (
       <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
-        <DetailHeader backHref="/quests" title="Quest Detail" />
+        <DetailHeader backHref="/quests" title={t("quest.detail")} />
         <div className="h-44 animate-pulse rounded-2xl border border-slate-800/80 bg-[#07111f]/70" />
         <div className="h-72 animate-pulse rounded-2xl border border-slate-800/80 bg-[#07111f]/70" />
       </main>
@@ -84,9 +63,9 @@ export default function QuestDetailPage() {
   if (error || !snapshot) {
     return (
       <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
-        <DetailHeader backHref="/quests" title="Quest Detail" />
+        <DetailHeader backHref="/quests" title={t("quest.detail")} />
         <section className="rounded-xl border border-rose-500/50 bg-rose-950/20 p-4 text-sm text-rose-100">
-          Could not load this quest. {error?.message}
+          {t("error.loadQuest", { message: error?.message ?? "" })}
         </section>
       </main>
     );
@@ -97,9 +76,9 @@ export default function QuestDetailPage() {
   if (!task) {
     return (
       <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
-        <DetailHeader backHref="/quests" title="Quest Detail" />
+        <DetailHeader backHref="/quests" title={t("quest.detail")} />
         <section className="rounded-xl border border-rose-500/50 bg-rose-950/20 p-4 text-sm text-rose-100">
-          Quest was not found on this device.
+          {t("error.questNotFound")}
         </section>
       </main>
     );
@@ -121,7 +100,10 @@ export default function QuestDetailPage() {
 
     return {
       key: taskAttribute.key,
-      label: storedAttribute?.label ?? getAttributeFallbackLabel(taskAttribute.key),
+      label:
+        storedAttribute?.isDefault && isCoreAttributeKey(storedAttribute.key)
+          ? t(`attribute.${storedAttribute.key}`)
+          : storedAttribute?.label ?? getAttributeFallbackLabel(taskAttribute.key, t),
       storedAttribute,
       weight: taskAttribute.weight,
     };
@@ -137,15 +119,17 @@ export default function QuestDetailPage() {
         await refresh();
         setActionNotice({
           tone: "error",
-          message: `Penalty recorded: -${formatNumber(result.penaltyXp)} XP${
-            result.penaltyCoins > 0
-              ? `, -${formatNumber(result.penaltyCoins)} coins`
-              : ""
-          }${
-            result.penaltyGems > 0
-              ? `, -${formatNumber(result.penaltyGems)} gems`
-              : ""
-          }.`,
+          message: t("quest.penaltyRecorded", {
+            coins:
+              result.penaltyCoins > 0
+                ? `, -${formatNumber(result.penaltyCoins)} ${t("common.coins")}`
+                : "",
+            gems:
+              result.penaltyGems > 0
+                ? `, -${formatNumber(result.penaltyGems)} ${t("common.gems")}`
+                : "",
+            xp: formatNumber(result.penaltyXp),
+          }),
         });
         return;
       }
@@ -154,9 +138,10 @@ export default function QuestDetailPage() {
       await refresh();
       setActionNotice({
         tone: "success",
-        message: `${selectedTask.title} completed for ${formatAppDate(
-          result.completion.completedForDate,
-        )}.`,
+        message: t("quest.completedForDate", {
+          date: formatAppDate(result.completion.completedForDate, formatDate),
+          title: translateGameText(selectedTask.title, language) ?? selectedTask.title,
+        }),
       });
     } catch (caughtError) {
       setActionNotice({
@@ -164,7 +149,7 @@ export default function QuestDetailPage() {
         message:
           caughtError instanceof Error
             ? caughtError.message
-            : "Could not complete this quest.",
+            : t("error.completeQuest"),
       });
     } finally {
       setIsCompleting(false);
@@ -188,7 +173,7 @@ export default function QuestDetailPage() {
         message:
           caughtError instanceof Error
             ? caughtError.message
-            : "Could not delete this quest.",
+            : t("error.deleteQuest"),
       });
     } finally {
       setIsDeleting(false);
@@ -197,7 +182,7 @@ export default function QuestDetailPage() {
 
   return (
     <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
-      <DetailHeader backHref="/quests" title="Quest Detail" />
+      <DetailHeader backHref="/quests" title={t("quest.detail")} />
 
       {actionNotice && (
         <p
@@ -217,31 +202,34 @@ export default function QuestDetailPage() {
       <section className="grid grid-cols-3 gap-2">
         <SummaryTile
           icon={<Zap className="size-4" />}
-          label="XP"
+          label={t("common.xp")}
           value={formatNumber(selectedTask.xpReward)}
         />
         <SummaryTile
           icon={<CircleDollarSign className="size-4" />}
-          label="Coins"
+          label={t("common.coinsLabel")}
           value={formatNumber(selectedTask.coinReward)}
         />
         <SummaryTile
           icon={<Gem className="size-4" />}
-          label="Gems"
+          label={t("common.gemsLabel")}
           value={formatNumber(selectedTask.gemReward)}
         />
       </section>
 
       <section className="grid grid-cols-2 gap-2">
-        <DetailStat label="Type" value={kindLabels[selectedTask.kind]} />
+        <DetailStat label={t("common.type")} value={getTaskKindLabel(selectedTask.kind, t)} />
         <DetailStat
-          label="Difficulty"
-          value={difficultyLabels[selectedTask.difficulty]}
+          label={t("quest.difficulty")}
+          value={getDifficultyLabel(selectedTask.difficulty, t)}
         />
-        <DetailStat label="Status" value={statusLabels[selectedTask.status]} />
         <DetailStat
-          label="XP Loss"
-          value={`${formatNumber(selectedTask.missedPenaltyXp)} XP`}
+          label={t("common.status")}
+          value={getStatusLabel(selectedTask.status, t)}
+        />
+        <DetailStat
+          label={t("quest.xpLoss")}
+          value={`${formatNumber(selectedTask.missedPenaltyXp)} ${t("common.xp")}`}
         />
       </section>
 
@@ -250,43 +238,43 @@ export default function QuestDetailPage() {
           icon={<CalendarDays className="size-5" />}
           title={
             selectedTask.kind === "daily"
-              ? "Daily Rules"
+              ? t("quest.dailyRules")
               : selectedTask.kind === "avoid"
-                ? "Avoidance Rules"
-                : "Deadline"
+                ? t("quest.avoidanceRules")
+                : t("quest.deadline")
           }
         />
         {selectedTask.kind === "daily" ? (
           <div className="grid grid-cols-2 gap-2">
             <DetailStat
-              label="Streak Every"
-              value={`${formatNumber(selectedTask.streakBonusEvery ?? 0)} days`}
+              label={t("quest.streakEvery")}
+              value={`${formatNumber(selectedTask.streakBonusEvery ?? 0)} ${t("home.days")}`}
             />
             <DetailStat
-              label="Bonus"
-              value={`${formatNumber(selectedTask.streakBonusXp ?? 0)} XP`}
+              label={t("common.bonus")}
+              value={`${formatNumber(selectedTask.streakBonusXp ?? 0)} ${t("common.xp")}`}
             />
           </div>
         ) : selectedTask.kind === "avoid" ? (
           <div className="space-y-2">
             <p className="rounded-xl border border-slate-700/55 bg-[#030914]/55 p-3 text-sm text-slate-300">
               {selectedTask.deadline
-                ? `Avoid until ${formatAppDate(
-                    selectedTask.deadline,
-                  )}. If the deadline passes untouched, this quest succeeds.`
-                : "No deadline. This stays active as a reusable penalty button."}
+                ? t("quest.avoidUntil", {
+                    date: formatAppDate(selectedTask.deadline, formatDate),
+                  })
+                : t("quest.noAvoidDeadline")}
             </p>
             <div className="grid grid-cols-3 gap-2">
               <DetailStat
-                label="XP Loss"
-                value={`${formatNumber(selectedTask.missedPenaltyXp)} XP`}
+                label={t("quest.xpLoss")}
+                value={`${formatNumber(selectedTask.missedPenaltyXp)} ${t("common.xp")}`}
               />
               <DetailStat
-                label="Coin Loss"
+                label={t("quest.coinLoss")}
                 value={formatNumber(selectedTask.missedPenaltyCoins ?? 0)}
               />
               <DetailStat
-                label="Gem Loss"
+                label={t("quest.gemLoss")}
                 value={formatNumber(selectedTask.missedPenaltyGems ?? 0)}
               />
             </div>
@@ -294,8 +282,10 @@ export default function QuestDetailPage() {
         ) : (
           <p className="rounded-xl border border-slate-700/55 bg-[#030914]/55 p-3 text-sm text-slate-300">
             {selectedTask.deadline
-              ? `Due ${formatAppDate(selectedTask.deadline)}`
-              : "No deadline set."}
+              ? t("quest.dueDate", {
+                  date: formatAppDate(selectedTask.deadline, formatDate),
+                })
+              : t("quest.noDeadline")}
           </p>
         )}
       </section>
@@ -312,7 +302,7 @@ export default function QuestDetailPage() {
       <section className="space-y-3">
         <SectionTitle
           icon={<Sparkles className="size-5" />}
-          title="Related Attributes"
+          title={t("quest.relatedAttributes")}
         />
         <div className="space-y-2">
           {taskAttributes.map((attribute) => (
@@ -329,11 +319,11 @@ export default function QuestDetailPage() {
       <section className="space-y-3 rounded-2xl border border-slate-700/55 bg-[#07111f]/82 p-4 shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(99,148,216,0.06)] backdrop-blur-xl">
         <SectionTitle
           icon={<CheckCircle2 className="size-5" />}
-          title="Completion History"
+          title={t("quest.completionHistory")}
         />
         {completions.length === 0 ? (
           <p className="text-sm text-slate-400">
-            This quest has not been completed yet.
+            {t("quest.notCompleted")}
           </p>
         ) : (
           <div className="space-y-2">
@@ -352,7 +342,7 @@ export default function QuestDetailPage() {
         >
           <Link href={`/quests/${selectedTask.id}/edit`}>
             <Pencil className="size-5" />
-            Edit
+            {t("action.edit")}
           </Link>
         </Button>
         <Button
@@ -366,7 +356,11 @@ export default function QuestDetailPage() {
           variant="ghost"
         >
           <Trash2 className={cn("size-5", isDeleting && "animate-pulse")} />
-          {isDeleting ? "Deleting..." : isConfirmingDelete ? "Confirm Delete" : "Delete"}
+          {isDeleting
+            ? t("action.deleting")
+            : isConfirmingDelete
+              ? t("action.confirmDelete")
+              : t("action.delete")}
         </Button>
         <Button
           className={cn(
@@ -386,6 +380,7 @@ export default function QuestDetailPage() {
             isCompleted,
             isCompleting,
             task: selectedTask,
+            t,
           })}
         </Button>
       </section>
@@ -400,6 +395,8 @@ function DetailHeader({
   backHref: string;
   title: string;
 }) {
+  const { t } = useI18n();
+
   return (
     <header className="flex items-center gap-3 pt-2">
       <Button
@@ -408,12 +405,12 @@ function DetailHeader({
         size="icon"
         variant="ghost"
       >
-        <Link aria-label="Back to quests" href={backHref}>
+        <Link aria-label={t("action.backQuests")} href={backHref}>
           <ArrowLeft className="size-5" />
         </Link>
       </Button>
       <div className="min-w-0">
-        <p className="text-sm font-medium text-[#3d87ff]">Quest Control</p>
+        <p className="text-sm font-medium text-[#3d87ff]">{t("quest.control")}</p>
         <h1 className="truncate text-3xl font-semibold leading-none tracking-[-0.03em] text-white">
           {title}
         </h1>
@@ -423,7 +420,11 @@ function DetailHeader({
 }
 
 function QuestHero({ task }: { task: TaskDefinition }) {
+  const { language, t } = useI18n();
   const isBoss = task.kind === "boss";
+  const title = translateGameText(task.title, language) ?? task.title;
+  const description =
+    translateGameText(task.description, language) ?? t("quest.noDescription");
 
   return (
     <section
@@ -461,10 +462,10 @@ function QuestHero({ task }: { task: TaskDefinition }) {
               ) : (
                 <Sparkles className="size-3.5" />
               )}
-              {kindLabels[task.kind]}
+              {getTaskKindLabel(task.kind, t)}
             </p>
             <h2 className="text-3xl font-semibold leading-none tracking-[-0.03em] text-white">
-              {task.title}
+              {title}
             </h2>
           </div>
           <span
@@ -475,12 +476,12 @@ function QuestHero({ task }: { task: TaskDefinition }) {
                 : "border-slate-600/60 bg-slate-950/50 text-slate-300",
             )}
           >
-            {statusLabels[task.status]}
+            {getStatusLabel(task.status, t)}
           </span>
         </div>
 
         <p className="text-sm leading-relaxed text-slate-300">
-          {task.description ?? "No description yet."}
+          {description}
         </p>
       </div>
     </section>
@@ -536,6 +537,7 @@ function AttributeRow({
   storedAttribute?: AttributeProgress;
   weight: number;
 }) {
+  const { formatNumber, t } = useI18n();
   const visual = getAttributeVisual(storedAttribute ?? label);
   const colorScheme = getAttributeColorSchemeOption(visual.color);
   const Icon = visual.icon;
@@ -556,7 +558,9 @@ function AttributeRow({
       </div>
       <div className="min-w-0">
         <h3 className="truncate text-base font-medium text-white">{label}</h3>
-        <p className="text-sm text-slate-400">Weight {formatNumber(weight)}</p>
+        <p className="text-sm text-slate-400">
+          {t("quest.weightValue", { weight: formatNumber(weight) })}
+        </p>
       </div>
       <Sparkles className="size-5 text-slate-500" />
     </article>
@@ -564,6 +568,8 @@ function AttributeRow({
 }
 
 function CompletionRow({ completion }: { completion: TaskCompletion }) {
+  const { formatDate, formatNumber, t } = useI18n();
+
   return (
     <article className="grid grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-slate-700/55 bg-[#030914]/55 p-3">
       <div className="flex size-10 items-center justify-center rounded-xl border border-emerald-400/40 bg-emerald-950/25 text-emerald-300">
@@ -571,14 +577,14 @@ function CompletionRow({ completion }: { completion: TaskCompletion }) {
       </div>
       <div className="min-w-0">
         <h3 className="truncate text-sm font-semibold text-white">
-          {formatAppDate(completion.completedForDate)}
+          {formatAppDate(completion.completedForDate, formatDate)}
         </h3>
         <p className="truncate text-xs text-slate-400">
-          {formatDateTime(completion.completedAt)}
+          {formatDateTime(completion.completedAt, formatDate)}
         </p>
       </div>
       <p className="text-sm font-semibold text-[#5aa0ff]">
-        +{formatNumber(completion.earnedXp)} XP
+        +{formatNumber(completion.earnedXp)} {t("common.xp")}
       </p>
     </article>
   );
@@ -599,57 +605,110 @@ function getCompleteButtonLabel({
   isCompleted,
   isCompleting,
   task,
+  t,
 }: {
   canComplete: boolean;
   isCompleted: boolean;
   isCompleting: boolean;
   task: TaskDefinition;
+  t: (key: string, params?: Record<string, number | string>) => string;
 }) {
   if (isCompleting) {
-    return "Completing...";
+    return t("quest.completing");
   }
 
   if (isCompleted) {
     if (task.kind === "avoid") {
-      return "Avoid Quest Succeeded";
+      return t("quest.avoidSucceeded");
     }
 
-    return task.kind === "boss" ? "Boss Defeated" : "Already Completed";
+    return task.kind === "boss"
+      ? t("modal.bossDefeated")
+      : t("quest.alreadyCompleted");
   }
 
   if (!canComplete) {
-    return `Cannot Complete: ${statusLabels[task.status]}`;
+    return t("quest.cannotComplete", {
+      status: getStatusLabel(task.status, t),
+    });
   }
 
   if (task.kind === "avoid") {
-    return "Record Penalty";
+    return t("action.recordPenalty");
   }
 
-  return task.kind === "boss" ? "Complete Boss Quest" : "Complete Quest";
+  return task.kind === "boss"
+    ? t("quest.action.completeBoss")
+    : t("quest.action.completeQuest");
 }
 
-function getAttributeFallbackLabel(key: AttributeKey) {
+function getAttributeFallbackLabel(
+  key: AttributeKey,
+  t: (key: string) => string,
+) {
+  if (isCoreAttributeKey(key)) {
+    return t(`attribute.${key}`);
+  }
+
   return key
     .replace(/^custom-/, "")
     .split("-")
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ") || "Custom";
+    .join(" ") || t("attribute.custom");
 }
 
-function formatAppDate(date: string) {
-  return new Intl.DateTimeFormat("en-US", {
+function formatAppDate(
+  date: string,
+  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string,
+) {
+  return formatDate(new Date(`${date}T00:00:00`), {
     day: "numeric",
     month: "short",
     year: "numeric",
-  }).format(new Date(`${date}T00:00:00`));
+  });
 }
 
-function formatDateTime(date: string) {
-  return new Intl.DateTimeFormat("en-US", {
+function formatDateTime(
+  date: string,
+  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string,
+) {
+  return formatDate(new Date(date), {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
     month: "short",
-  }).format(new Date(date));
+  });
+}
+
+function getTaskKindLabel(
+  kind: TaskKind,
+  t: (key: string) => string,
+) {
+  const labels: Record<TaskKind, string> = {
+    avoid: t("quest.kind.avoidQuest"),
+    boss: t("quest.kind.bossQuest"),
+    daily: t("quest.kind.dailyQuest"),
+    goal: t("quest.kind.goalQuest"),
+  };
+
+  return labels[kind];
+}
+
+function getDifficultyLabel(
+  difficulty: TaskDifficulty,
+  t: (key: string) => string,
+) {
+  if (difficulty === "boss") {
+    return t("quest.kind.boss");
+  }
+
+  return t(`difficulty.${difficulty}`);
+}
+
+function getStatusLabel(
+  status: TaskDefinition["status"],
+  t: (key: string) => string,
+) {
+  return t(`quest.status.${status}`);
 }
