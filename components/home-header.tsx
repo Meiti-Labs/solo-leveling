@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { Bell, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { UserProfile } from "@/lib/indexed-db/types";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type AvatarTier = "begginer" | "apprantice" | "master" | "legend";
@@ -26,6 +27,7 @@ export default function HomeHeader({
   unreadNotifications?: number;
   profile?: UserProfile;
 }) {
+  const { t } = useI18n();
   const displayName = getDisplayName(profile);
   const avatarTier = getAvatarTier(level);
 
@@ -50,10 +52,10 @@ export default function HomeHeader({
           {displayName}
         </h1>
         <p className="truncate font-sans text-xs leading-tight text-slate-400 ">
-          {getHunterTitle(level)}
+          {t(getHunterTitleKey(level))}
         </p>
         <div className="inline-flex max-w-full items-center gap-2 rounded-full border border-indigo-400/10 bg-indigo-950/55 px-3 py-1 text-sm font-semibold text-indigo-200 shadow-[0_0_20px_rgba(79,70,229,0.18)] sm:text-base">
-          <span className="truncate text-[10px]">{getHunterRank(level)}</span>
+          <span className="truncate text-[10px]">{t(getHunterRankKey(level))}</span>
         </div>
       </div>
 
@@ -61,11 +63,11 @@ export default function HomeHeader({
         <HeaderIconButton
           hasBadge={unreadNotifications > 0}
           href="/notifications"
-          label="Notifications"
+          label={t("common.notifications")}
         >
           <Bell className="size-6 sm:size-7" />
         </HeaderIconButton>
-        <HeaderIconButton href="/settings" label="Settings">
+        <HeaderIconButton href="/settings" label={t("common.settings")}>
           <Settings className="size-6 sm:size-7" />
         </HeaderIconButton>
       </div>
@@ -128,20 +130,20 @@ function getDisplayName(profile?: UserProfile) {
   return fullName || profile?.username || "Shadow";
 }
 
-function getHunterTitle(level: number) {
-  if (level >= 100) return "The Legendary One";
-  if (level >= 75) return "The Relentless One";
-  if (level >= 50) return "The Awakened One";
-  if (level >= 25) return "The Disciplined One";
-  if (level >= 10) return "The Rising One";
-  return "New Hunter";
+function getHunterTitleKey(level: number) {
+  if (level >= 100) return "hunter.title.legendary";
+  if (level >= 75) return "hunter.title.relentless";
+  if (level >= 50) return "hunter.title.awakened";
+  if (level >= 25) return "hunter.title.disciplined";
+  if (level >= 10) return "hunter.title.rising";
+  return "hunter.title.new";
 }
 
-function getHunterRank(level: number) {
-  if (level >= 100) return "Legendary Awakener";
-  if (level >= 75) return "S-Rank Awakener";
-  if (level >= 50) return "A-Rank Awakener";
-  if (level >= 25) return "B-Rank Awakener";
-  if (level >= 10) return "C-Rank Awakener";
-  return "E-Rank Awakener";
+function getHunterRankKey(level: number) {
+  if (level >= 100) return "hunter.rank.legendary";
+  if (level >= 75) return "hunter.rank.s";
+  if (level >= 50) return "hunter.rank.a";
+  if (level >= 25) return "hunter.rank.b";
+  if (level >= 10) return "hunter.rank.c";
+  return "hunter.rank.e";
 }

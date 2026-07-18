@@ -2,6 +2,7 @@
 
 import { ClipboardClock, Search } from "lucide-react";
 import PageHeader from "@/components/page-header";
+import { useI18n } from "@/lib/i18n";
 
 const questTabs = [
   "All",
@@ -26,24 +27,36 @@ export default function QuestsHeader({
   onSearchClick: () => void;
   onTabChange: (tab: QuestTab) => void;
 }) {
+  const { t } = useI18n();
+  const tabLabelMap: Record<QuestTab, string> = {
+    All: t("quest.all"),
+    Avoid: t("quest.avoid"),
+    Bosses: t("quest.bosses"),
+    Challenges: t("quest.challenges"),
+    Completed: t("common.completed"),
+    Daily: t("quest.daily"),
+    Goals: t("quest.goals"),
+  };
+
   return (
     <PageHeader
       activeTab={activeTab}
       actions={[
         {
-          label: "Quest history",
+          label: t("quest.history"),
           icon: <ClipboardClock className="size-5" />,
           onClick: onHistoryClick,
         },
         {
-          label: "Search quests",
+          label: t("quest.search"),
           icon: <Search className="size-5" />,
           onClick: onSearchClick,
         },
       ]}
       onTabChange={(tab) => onTabChange(tab as QuestTab)}
+      tabLabelMap={tabLabelMap}
       tabs={questTabs}
-      title="Quests"
+      title={t("common.quests")}
     />
   );
 }

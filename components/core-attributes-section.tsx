@@ -18,6 +18,7 @@ import type {
   CoreAttributeKey,
 } from "@/lib/indexed-db/types";
 import { ATTRIBUTE_KEYS } from "@/lib/indexed-db/types";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type Attribute = {
@@ -106,13 +107,12 @@ const colorStyles: Record<
   },
 };
 
-const formatXp = (xp: number) => new Intl.NumberFormat("en-US").format(xp);
-
 export default function CoreAttributesSection({
   attributes,
 }: {
   attributes: AttributeWithLevel[];
 }) {
+  const { formatNumber, t } = useI18n();
   const cards = ATTRIBUTE_KEYS.map((key) => {
     const attribute = attributes.find((item) => item.key === key);
     const visual = attributeVisuals[key];
@@ -123,7 +123,7 @@ export default function CoreAttributesSection({
 
     return {
       key,
-      label: attribute.label || visual.label,
+      label: attribute.isDefault ? t(`attribute.${key}`) : attribute.label || visual.label,
       progress: attribute.level,
       color: visual.color,
       icon: visual.icon,
@@ -133,26 +133,39 @@ export default function CoreAttributesSection({
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3 px-1">
-        <h2 className="text-lg font-medium text-white">Core Attributes</h2>
+        <h2 className="text-lg font-medium text-white">{t("home.coreAttributes")}</h2>
         <Button
           asChild
           className="h-auto px-0 text-sm font-medium text-[#4f8cff] hover:text-[#78a8ff]"
           variant="link"
         >
-          <Link href="/attributes">View All</Link>
+          <Link href="/attributes">{t("action.viewAll")}</Link>
         </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-2">
         {cards.map((attribute) => (
-          <AttributeCard attribute={attribute} key={attribute.key} />
+          <AttributeCard
+            attribute={attribute}
+            formatNumber={formatNumber}
+            key={attribute.key}
+            t={t}
+          />
         ))}
       </div>
     </section>
   );
 }
 
-function AttributeCard({ attribute }: { attribute: Attribute }) {
+function AttributeCard({
+  attribute,
+  formatNumber,
+  t,
+}: {
+  attribute: Attribute;
+  formatNumber: (value: number) => string;
+  t: (key: string) => string;
+}) {
   const Icon = attribute.icon;
   const percent = attribute.progress.progressPercent;
   const styles = colorStyles[attribute.color];
@@ -179,7 +192,7 @@ function AttributeCard({ attribute }: { attribute: Attribute }) {
             {attribute.label}
           </h3>
           <span className="shrink-0 text-sm text-slate-300">
-            Lv. <span className="text-white">{attribute.progress.level}</span>
+            {t("level.short")} <span className="text-white">{attribute.progress.level}</span>
           </span>
         </div>
 
@@ -192,8 +205,8 @@ function AttributeCard({ attribute }: { attribute: Attribute }) {
 
         <p className="truncate text-sm text-slate-400">
           {isLegendary
-            ? `${formatXp(attribute.progress.totalXp)} total XP`
-            : `${formatXp(attribute.progress.xpIntoLevel)} / ${formatXp(
+            ? `${formatNumber(attribute.progress.totalXp)} ${t("home.totalXp")}`
+            : `${formatNumber(attribute.progress.xpIntoLevel)} / ${formatNumber(
                 attribute.progress.xpForNextLevel,
               )} XP`}
         </p>

@@ -14,6 +14,7 @@ import {
 import PageHeader from "@/components/page-header";
 import type { GameSnapshot } from "@/hooks/use-game-snapshot";
 import { useGameSnapshot } from "@/hooks/use-game-snapshot";
+import { useI18n } from "@/lib/i18n";
 import type { CoreAttributeKey } from "@/lib/indexed-db/types";
 
 type Period = "Daily" | "Weekly" | "Monthly" | "Yearly" | "Lifetime";
@@ -72,17 +73,17 @@ const attributeOrder: CoreAttributeKey[] = [
   "communication",
 ];
 
-const formatNumber = (value: number) =>
-  new Intl.NumberFormat("en-US").format(value);
-
 export default function AnalyticsScreen() {
   const [activePeriod, setActivePeriod] = useState<Period>("Daily");
   const { error, isLoading, refresh, snapshot } = useGameSnapshot();
+  const { formatDate, formatNumber, t } = useI18n();
   const handlePeriodChange = (tab: string) => {
     if (isPeriod(tab)) {
       setActivePeriod(tab);
     }
   };
+
+  const tabLabelMap = buildPeriodLabels(t);
 
   if (isLoading) {
     return (
@@ -90,8 +91,9 @@ export default function AnalyticsScreen() {
         <PageHeader
           activeTab={activePeriod}
           onTabChange={handlePeriodChange}
+          tabLabelMap={tabLabelMap}
           tabs={periods}
-          title="Analytics"
+          title={t("common.analytics")}
         />
         {Array.from({ length: 4 }).map((_, index) => (
           <div
@@ -109,8 +111,9 @@ export default function AnalyticsScreen() {
         <PageHeader
           activeTab={activePeriod}
           onTabChange={handlePeriodChange}
+          tabLabelMap={tabLabelMap}
           tabs={periods}
-          title="Analytics"
+          title={t("common.analytics")}
         />
         <section className="rounded-xl border border-rose-500/50 bg-rose-950/20 p-4 text-sm text-rose-100">
           Could not load analytics. {error?.message}
@@ -119,10 +122,10 @@ export default function AnalyticsScreen() {
     );
   }
 
-  const periodAnalytics = buildPeriodAnalytics(snapshot, activePeriod);
-  const xpGrowth = buildXpGrowth(snapshot, activePeriod);
-  const categoryGrowth = buildCategoryGrowth(snapshot, periodAnalytics.completions);
-  const stats = buildStats(snapshot, periodAnalytics);
+  const periodAnalytics = buildPeriodAnalytics(snapshot, activePeriod, t);
+  const xpGrowth = buildXpGrowth(snapshot, activePeriod, formatDate);
+  const categoryGrowth = buildCategoryGrowth(snapshot, periodAnalytics.completions, t);
+  const stats = buildStats(snapshot, periodAnalytics, formatNumber, t);
 
   return (
     <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
@@ -140,8 +143,9 @@ export default function AnalyticsScreen() {
           },
         ]}
         onTabChange={handlePeriodChange}
+        tabLabelMap={tabLabelMap}
         tabs={periods}
-        title="Analytics"
+        title={t("common.analytics")}
       />
       <XpGrowthCard
         change={periodAnalytics.xpChange}
@@ -149,15 +153,29 @@ export default function AnalyticsScreen() {
         periodLabel={periodAnalytics.label}
         points={xpGrowth}
         totalXp={periodAnalytics.xp}
+        formatNumber={formatNumber}
+        t={t}
       />
-      <CategoryGrowthCard points={categoryGrowth} />
-      <LevelRoadmapLink totalXp={snapshot.progress.overallXp} />
+      <CategoryGrowthCard points={categoryGrowth} t={t} />
+      <LevelRoadmapLink
+        formatNumber={formatNumber}
+        totalXp={snapshot.progress.overallXp}
+        t={t}
+      />
       <StatsGrid stats={stats} />
     </main>
   );
 }
 
-function LevelRoadmapLink({ totalXp }: { totalXp: number }) {
+function LevelRoadmapLink({
+  formatNumber,
+  totalXp,
+  t,
+}: {
+  formatNumber: (value: number) => string;
+  totalXp: number;
+  t: (key: string, params?: Record<string, number | string>) => string;
+}) {
   return (
     <Link
       className="block rounded-2xl border border-[#2f8cff]/45 bg-[#07111f]/82 p-4 shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(99,148,216,0.06)] transition hover:border-[#5aa0ff]/70 hover:bg-[#0b1728]/90"
@@ -165,12 +183,12 @@ function LevelRoadmapLink({ totalXp }: { totalXp: number }) {
     >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-[#5aa0ff]">Level Roadmap</p>
+          <p className="text-sm font-medium text-[#5aa0ff]">{t("analytics.levelRoadmap")}</p>
           <h2 className="mt-1 truncate text-xl font-semibold text-white">
-            XP Milestones to Level 200
+            {t("analytics.xpMilestones")}
           </h2>
           <p className="mt-1 text-sm text-slate-400">
-            Current XP: {formatNumber(totalXp)}
+            {t("analytics.currentXp", { xp: formatNumber(totalXp) })}
           </p>
         </div>
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full border border-[#2f8cff]/45 bg-blue-950/25 text-[#78b4ff]">
@@ -187,18 +205,22 @@ function XpGrowthCard({
   periodLabel,
   points,
   totalXp,
+  formatNumber,
+  t,
 }: {
   change: string;
   comparisonLabel: string;
   periodLabel: string;
   points: ChartPoint[];
   totalXp: number;
+  formatNumber: (value: number) => string;
+  t: (key: string) => string;
 }) {
   return (
     <section className="rounded-2xl border border-slate-700/55 bg-[#07111f]/82 p-4 shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(99,148,216,0.06)] backdrop-blur-xl">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div className="space-y-2">
-          <h2 className="text-xl font-semibold text-white">XP Growth</h2>
+          <h2 className="text-xl font-semibold text-white">{t("analytics.xpGrowth")}</h2>
           <p className="flex items-center gap-1.5 text-sm text-slate-300">
             <TrendingUp className="size-4 fill-emerald-400 text-emerald-400" />
             <span className="font-semibold text-emerald-400">{change}</span>
@@ -326,10 +348,16 @@ function LineChart({ points: sourcePoints }: { points: ChartPoint[] }) {
   );
 }
 
-function CategoryGrowthCard({ points }: { points: RadarPoint[] }) {
+function CategoryGrowthCard({
+  points,
+  t,
+}: {
+  points: RadarPoint[];
+  t: (key: string) => string;
+}) {
   return (
     <section className="rounded-2xl border border-slate-700/55 bg-[#07111f]/82 p-4 shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(99,148,216,0.06)] backdrop-blur-xl">
-      <h2 className="mb-2 text-xl font-semibold text-white">Category Growth</h2>
+      <h2 className="mb-2 text-xl font-semibold text-white">{t("analytics.categoryGrowth")}</h2>
       <RadarChart points={points} />
     </section>
   );
@@ -481,8 +509,9 @@ function AnalyticsStatCard({ stat }: { stat: StatCard }) {
 function buildPeriodAnalytics(
   snapshot: GameSnapshot,
   period: Period,
+  t: (key: string) => string,
 ): PeriodAnalytics {
-  const context = getPeriodContext(period);
+  const context = getPeriodContext(period, t);
   const completions = snapshot.taskCompletions.filter((completion) =>
     isAppDateInRange(completion.completedForDate, context.current),
   );
@@ -504,12 +533,16 @@ function buildPeriodAnalytics(
     rewardPurchases,
     walletTransactions,
     xp,
-    xpChange: context.previous ? calculateChange(xp, previousXp) : "All time",
+    xpChange: context.previous ? calculateChange(xp, previousXp) : t("analytics.allTime"),
   };
 }
 
-function buildXpGrowth(snapshot: GameSnapshot, period: Period): ChartPoint[] {
-  return buildTimeBuckets(period, snapshot.taskCompletions).map((bucket) => ({
+function buildXpGrowth(
+  snapshot: GameSnapshot,
+  period: Period,
+  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string,
+): ChartPoint[] {
+  return buildTimeBuckets(period, snapshot.taskCompletions, new Date(), formatDate).map((bucket) => ({
     label: bucket.label,
     value: sumCompletionXpForRange(snapshot.taskCompletions, bucket),
   }));
@@ -518,6 +551,7 @@ function buildXpGrowth(snapshot: GameSnapshot, period: Period): ChartPoint[] {
 function buildCategoryGrowth(
   snapshot: GameSnapshot,
   completions: GameSnapshot["taskCompletions"],
+  t: (key: string) => string,
 ): RadarPoint[] {
   const xpByAttribute = completions.reduce<Record<string, number>>(
     (totals, completion) => {
@@ -539,7 +573,7 @@ function buildCategoryGrowth(
     const xp = xpByAttribute[key] ?? 0;
 
     return {
-      label: attribute?.label ?? capitalize(key),
+      label: attribute?.isDefault ? t(`attribute.${key}`) : attribute?.label ?? t(`attribute.${key}`),
       value: xp > 0 ? Math.round((xp / maxXp) * 100) : 0,
     };
   });
@@ -548,6 +582,8 @@ function buildCategoryGrowth(
 function buildStats(
   snapshot: GameSnapshot,
   analytics: PeriodAnalytics,
+  formatNumber: (value: number) => string,
+  t: (key: string) => string,
 ): StatCard[] {
   const bossesCompleted = analytics.completions.filter(
     (completion) => completion.taskKind === "boss",
@@ -557,27 +593,28 @@ function buildStats(
 
   return [
     {
-      label: "Tasks Completed",
+      label: t("analytics.tasksCompleted"),
       value: formatNumber(analytics.completions.length),
       helper: analytics.label,
       icon: CheckSquare,
     },
     {
-      label: "Wallet",
+      label: t("analytics.wallet"),
       value: formatNumber(snapshot.progress.coins),
-      helper: `${formatSignedNumber(coinsDelta)} coins / ${formatSignedNumber(
+      helper: `${formatSignedNumber(coinsDelta, formatNumber)} ${t("common.coins")} / ${formatSignedNumber(
         gemsDelta,
-      )} gems`,
+        formatNumber,
+      )} ${t("common.gems")}`,
       icon: CircleDollarSign,
     },
     {
-      label: "Bosses Defeated",
+      label: t("common.bossesDefeated"),
       value: formatNumber(bossesCompleted),
       helper: analytics.label,
       icon: ShieldCheck,
     },
     {
-      label: "Rewards Claimed",
+      label: t("analytics.rewardsClaimed"),
       value: formatNumber(analytics.rewardPurchases.length),
       helper: analytics.label,
       icon: Gem,
@@ -585,16 +622,20 @@ function buildStats(
   ];
 }
 
-function getPeriodContext(period: Period, baseDate = new Date()): PeriodContext {
+function getPeriodContext(
+  period: Period,
+  t: (key: string) => string,
+  baseDate = new Date(),
+): PeriodContext {
   const today = getDateKey(baseDate);
 
   if (period === "Daily") {
     const yesterday = getDateKey(addDays(baseDate, -1));
 
     return {
-      comparisonLabel: "vs yesterday",
+      comparisonLabel: t("analytics.vsYesterday"),
       current: { start: today, end: today },
-      label: "today",
+      label: t("analytics.today"),
       previous: { start: yesterday, end: yesterday },
     };
   }
@@ -605,9 +646,9 @@ function getPeriodContext(period: Period, baseDate = new Date()): PeriodContext 
     const previousWeekEnd = addDays(weekStart, -1);
 
     return {
-      comparisonLabel: "vs last week",
+      comparisonLabel: t("analytics.vsLastWeek"),
       current: { start: getDateKey(weekStart), end: today },
-      label: "this week",
+      label: t("analytics.thisWeek"),
       previous: {
         start: getDateKey(previousWeekStart),
         end: getDateKey(previousWeekEnd),
@@ -625,9 +666,9 @@ function getPeriodContext(period: Period, baseDate = new Date()): PeriodContext 
     const previousMonthEnd = addDays(monthStart, -1);
 
     return {
-      comparisonLabel: "vs last month",
+      comparisonLabel: t("analytics.vsLastMonth"),
       current: { start: getDateKey(monthStart), end: today },
-      label: "this month",
+      label: t("analytics.thisMonth"),
       previous: {
         start: getDateKey(previousMonthStart),
         end: getDateKey(previousMonthEnd),
@@ -641,9 +682,9 @@ function getPeriodContext(period: Period, baseDate = new Date()): PeriodContext 
     const previousYearEnd = new Date(baseDate.getFullYear() - 1, 11, 31);
 
     return {
-      comparisonLabel: "vs last year",
+      comparisonLabel: t("analytics.vsLastYear"),
       current: { start: getDateKey(yearStart), end: today },
-      label: "this year",
+      label: t("analytics.thisYear"),
       previous: {
         start: getDateKey(previousYearStart),
         end: getDateKey(previousYearEnd),
@@ -652,9 +693,9 @@ function getPeriodContext(period: Period, baseDate = new Date()): PeriodContext 
   }
 
   return {
-    comparisonLabel: "earned",
+    comparisonLabel: t("analytics.earned"),
     current: { end: today },
-    label: "all time",
+    label: t("analytics.allTime"),
   };
 }
 
@@ -662,11 +703,12 @@ function buildTimeBuckets(
   period: Period,
   completions: GameSnapshot["taskCompletions"],
   baseDate = new Date(),
+  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string,
 ): TimeBucket[] {
   if (period === "Daily") {
     return getLastDates(7, baseDate).map((date) => ({
       end: date,
-      label: formatChartDate(date),
+      label: formatChartDate(date, formatDate),
       start: date,
     }));
   }
@@ -680,24 +722,28 @@ function buildTimeBuckets(
 
       return {
         end: getDateKey(end),
-        label: formatShortDate(start),
+        label: formatShortDate(start, formatDate),
         start: getDateKey(start),
       };
     });
   }
 
   if (period === "Monthly") {
-    return buildMonthBuckets(6, baseDate);
+    return buildMonthBuckets(6, baseDate, formatDate);
   }
 
   if (period === "Yearly") {
-    return buildMonthBuckets(12, baseDate);
+    return buildMonthBuckets(12, baseDate, formatDate);
   }
 
   return buildLifetimeBuckets(completions, baseDate);
 }
 
-function buildMonthBuckets(count: number, baseDate: Date): TimeBucket[] {
+function buildMonthBuckets(
+  count: number,
+  baseDate: Date,
+  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string,
+): TimeBucket[] {
   const currentMonthStart = new Date(
     baseDate.getFullYear(),
     baseDate.getMonth(),
@@ -714,7 +760,7 @@ function buildMonthBuckets(count: number, baseDate: Date): TimeBucket[] {
 
     return {
       end: getDateKey(end),
-      label: formatMonthBucket(start),
+      label: formatMonthBucket(start, formatDate),
       start: getDateKey(start),
     };
   });
@@ -819,26 +865,35 @@ function getDateKey(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function formatChartDate(dateKey: string) {
+function formatChartDate(
+  dateKey: string,
+  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string,
+) {
   const date = new Date(`${dateKey}T00:00:00`);
 
-  return new Intl.DateTimeFormat("en-US", {
+  return formatDate(date, {
     day: "numeric",
     month: "short",
-  }).format(date);
+  });
 }
 
-function formatShortDate(date: Date) {
-  return new Intl.DateTimeFormat("en-US", {
+function formatShortDate(
+  date: Date,
+  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string,
+) {
+  return formatDate(date, {
     day: "numeric",
     month: "short",
-  }).format(date);
+  });
 }
 
-function formatMonthBucket(date: Date) {
-  return new Intl.DateTimeFormat("en-US", {
+function formatMonthBucket(
+  date: Date,
+  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string,
+) {
+  return formatDate(date, {
     month: "short",
-  }).format(date);
+  });
 }
 
 function formatTick(value: number) {
@@ -858,7 +913,10 @@ function roundChartMax(value: number) {
   return Math.ceil(value / magnitude) * magnitude;
 }
 
-function formatSignedNumber(value: number) {
+function formatSignedNumber(
+  value: number,
+  formatNumber: (value: number) => string,
+) {
   if (value > 0) {
     return `+${formatNumber(value)}`;
   }
@@ -870,6 +928,12 @@ function formatSignedNumber(value: number) {
   return "0";
 }
 
-function capitalize(value: string) {
-  return value.charAt(0).toUpperCase() + value.slice(1);
+function buildPeriodLabels(t: (key: string) => string): Record<Period, string> {
+  return {
+    Daily: t("analytics.daily"),
+    Lifetime: t("analytics.lifetime"),
+    Monthly: t("analytics.monthly"),
+    Weekly: t("analytics.weekly"),
+    Yearly: t("analytics.yearly"),
+  };
 }

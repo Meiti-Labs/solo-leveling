@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import type { LevelProgress } from "@/lib/game/leveling";
+import { useI18n } from "@/lib/i18n";
 
 type BadgeTier = "1-10" | "10-25" | "25-50" | "50-75" | "75-100" | "100+";
 
@@ -14,13 +15,12 @@ const getBadgeTier = (level: number): BadgeTier => {
   return "1-10";
 };
 
-const formatXp = (xp: number) => new Intl.NumberFormat("en-US").format(xp);
-
 export default function LevelProgressCard({
   progress,
 }: {
   progress: LevelProgress;
 }) {
+  const { formatNumber, t } = useI18n();
   const percent = progress.progressPercent;
   const badgeTier = getBadgeTier(progress.level);
   const isLegendary = progress.level >= 100;
@@ -41,7 +41,7 @@ export default function LevelProgressCard({
           />
           <div className="absolute inset-0 flex flex-col items-center justify-center pt-2 text-center">
             <span className="font-sans text-[8px] -mt-3 -mr-1 mb-1 font-semibold tracking-[0.18em] text-slate-300">
-              LEVEL
+              {t("level.label")}
             </span>
             <span className="text-xl font-semibold leading-none text-white drop-shadow-[0_0_12px_rgba(92,160,255,0.95)] sm:text-6xl">
               {progress.level}
@@ -52,7 +52,7 @@ export default function LevelProgressCard({
         <div className="min-w-0 space-y-3 font-sans">
           <div className="flex items-center justify-between gap-3">
             <h2 className="truncate text-base font-medium text-slate-200 sm:text-lg">
-              XP Progress
+              {t("home.xpProgress")}
             </h2>
             <span className="shrink-0 text-lg  text-white sm:text-xl">
               {percent}%
@@ -71,23 +71,23 @@ export default function LevelProgressCard({
               {isLegendary ? (
                 <>
                   <span className="font-semibold text-[#3d87ff]">
-                    {formatXp(progress.totalXp)}
+                    {formatNumber(progress.totalXp)}
                   </span>{" "}
-                  total XP
+                  {t("home.totalXp")}
                 </>
               ) : (
                 <>
                   <span className="font-semibold text-[#3d87ff]">
-                    {formatXp(progress.xpIntoLevel)}
+                    {formatNumber(progress.xpIntoLevel)}
                   </span>{" "}
-                  / {formatXp(progress.xpForNextLevel)} XP
+                  / {formatNumber(progress.xpForNextLevel)} XP
                 </>
               )}
             </p>
             <p className="truncate min-[390px]:text-right">
               {isLegendary
-                ? "Legendary Level"
-                : `Next Level: ${formatXp(progress.xpForNextLevel)} XP`}
+                ? t("home.legendaryLevel")
+                : t("home.nextLevel", { xp: formatNumber(progress.xpForNextLevel) })}
             </p>
           </div>
         </div>

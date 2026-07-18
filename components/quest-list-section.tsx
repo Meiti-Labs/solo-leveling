@@ -15,7 +15,6 @@ import type {
   AchievementDefinition,
   AttributeKey,
   AttributeProgress,
-  CoreAttributeKey,
   TaskCompletion,
   TaskDefinition,
   TaskDifficulty,
@@ -23,6 +22,7 @@ import type {
 } from "@/lib/indexed-db/types";
 import { isCoreAttributeKey } from "@/lib/indexed-db/types";
 import { cn } from "@/lib/utils";
+import { translateGameText, useI18n } from "@/lib/i18n";
 import { useGameSnapshot } from "@/hooks/use-game-snapshot";
 import type { GameSnapshot } from "@/hooks/use-game-snapshot";
 
@@ -38,22 +38,6 @@ type QuestTone =
   | "boss";
 
 type QuestAttributeVisual = ReturnType<typeof getAttributeVisual>;
-
-const difficultyLabels: Record<TaskDifficulty, string> = {
-  easy: "Easy",
-  medium: "Medium",
-  hard: "Hard",
-  boss: "Hard",
-};
-
-const coreAttributeLabels: Record<CoreAttributeKey, string> = {
-  communication: "Communication",
-  discipline: "Discipline",
-  finance: "Finance",
-  intelligence: "Intelligence",
-  strength: "Strength",
-  wisdom: "Wisdom",
-};
 
 const kindOrder: Record<TaskKind, number> = {
   daily: 0,
@@ -143,9 +127,6 @@ const toneStyles: Record<
   },
 };
 
-const formatNumber = (value: number) =>
-  new Intl.NumberFormat("en-US").format(value);
-
 type CompletionResult = Awaited<ReturnType<typeof gameService.completeTask>>;
 
 export default function QuestListSection({
@@ -158,6 +139,7 @@ export default function QuestListSection({
   searchQuery: string;
 }) {
   const { error, isLoading, refresh, snapshot } = useGameSnapshot();
+  const { formatNumber, language, t } = useI18n();
   const [actionError, setActionError] = useState<string | null>(null);
   const [confirmingDeleteTaskId, setConfirmingDeleteTaskId] = useState<
     string | null
@@ -179,7 +161,7 @@ export default function QuestListSection({
         shouldShowTaskForTab(task, activeTab, snapshot.taskCompletions, today),
       )
       .filter((task) =>
-        taskMatchesSearch(task, snapshot.attributes, searchQuery),
+        taskMatchesSearch(task, snapshot.attributes, searchQuery, t),
       )
       .sort((first, second) => {
         const order = activeTab === "All" ? allTabKindOrder : kindOrder;
@@ -191,7 +173,7 @@ export default function QuestListSection({
 
         return first.createdAt.localeCompare(second.createdAt);
       });
-  }, [activeTab, searchQuery, snapshot, today]);
+  }, [activeTab, searchQuery, snapshot, t, today]);
   const activeProgressionModal = progressionModals[0] ?? null;
   const progressionModal = activeProgressionModal ? (
     <ProgressionCelebrationModal
@@ -211,15 +193,17 @@ export default function QuestListSection({
         const result = await gameService.recordAvoidanceSlip(task.id);
         await refresh();
         setActionError(
-          `Penalty recorded: -${formatNumber(result.penaltyXp)} XP${
-            result.penaltyCoins > 0
-              ? `, -${formatNumber(result.penaltyCoins)} coins`
-              : ""
-          }${
-            result.penaltyGems > 0
-              ? `, -${formatNumber(result.penaltyGems)} gems`
-              : ""
-          }.`,
+          t("quest.penaltyRecorded", {
+            xp: formatNumber(result.penaltyXp),
+            coins:
+              result.penaltyCoins > 0
+                ? `, -${formatNumber(result.penaltyCoins)} ${t("common.coins")}`
+                : "",
+            gems:
+              result.penaltyGems > 0
+                ? `, -${formatNumber(result.penaltyGems)} ${t("common.gems")}`
+                : "",
+          }),
         );
         onQuestChanged?.();
         return;
@@ -227,7 +211,11 @@ export default function QuestListSection({
 
       const result = await gameService.completeTask(task.id, today);
       const nextSnapshot = await refresh();
-      const nextModals = buildProgressionModals(task, result, nextSnapshot);
+      const nextModals = buildProgressionModals(task, result, nextSnapshot, {
+        formatNumber,
+        language,
+        t,
+      });
 
       if (nextModals.length > 0) {
         setProgressionModals(nextModals);
@@ -301,8 +289,8 @@ export default function QuestListSection({
       <>
         <section className="rounded-xl border border-slate-700/55 bg-[#07111f]/82 p-4 text-sm text-slate-300">
           {searchQuery.trim()
-            ? `No quests match "${searchQuery.trim()}".`
-            : getEmptyStateMessage(activeTab)}
+            ? t("quest.noMatch", { query: searchQuery.trim() })
+            : getEmptyStateMessage(activeTab, t)}
         </section>
         {progressionModal}
       </>
@@ -325,13 +313,16 @@ export default function QuestListSection({
           return (
             <QuestCard
               attributes={snapshot.attributes}
+              formatNumber={formatNumber}
               isConfirmingDelete={confirmingDeleteTaskId === task.id}
               isCompleted={isCompleted}
               isDeleting={deletingTaskId === task.id}
               isSubmitting={submittingTaskId === task.id}
               key={task.id}
+              language={language}
               onComplete={() => completeQuest(task)}
               onDelete={() => deleteQuest(task)}
+              t={t}
               task={task}
             />
           );
@@ -344,21 +335,27 @@ export default function QuestListSection({
 
 function QuestCard({
   attributes,
+  formatNumber,
   isConfirmingDelete,
   isCompleted,
   isDeleting,
   isSubmitting,
+  language,
   onComplete,
   onDelete,
+  t,
   task,
 }: {
   attributes: AttributeProgress[];
+  formatNumber: (value: number) => string;
   isConfirmingDelete: boolean;
   isCompleted: boolean;
   isDeleting: boolean;
   isSubmitting: boolean;
+  language: "en" | "fa";
   onComplete: () => void;
   onDelete: () => void;
+  t: (key: string, params?: Record<string, number | string>) => string;
   task: TaskDefinition;
 }) {
   if (task.kind === "boss") {
@@ -368,8 +365,11 @@ function QuestCard({
         isCompleted={isCompleted}
         isDeleting={isDeleting}
         isSubmitting={isSubmitting}
+        formatNumber={formatNumber}
+        language={language}
         onComplete={onComplete}
         onDelete={onDelete}
+        t={t}
         task={task}
       />
     );
@@ -378,14 +378,17 @@ function QuestCard({
   if (task.kind === "avoid") {
     return (
       <NormalQuestCard
-        attributeLabel={getAttributeLabel(task, attributes)}
+        attributeLabel={getAttributeLabel(task, attributes, t)}
         attributeVisual={getTaskAttributeVisual(task, attributes)}
+        formatNumber={formatNumber}
         isConfirmingDelete={isConfirmingDelete}
         isCompleted={isCompleted}
         isDeleting={isDeleting}
         isSubmitting={isSubmitting}
+        language={language}
         onComplete={onComplete}
         onDelete={onDelete}
+        t={t}
         task={task}
         variant="avoid"
       />
@@ -394,14 +397,17 @@ function QuestCard({
 
   return (
     <NormalQuestCard
-      attributeLabel={getAttributeLabel(task, attributes)}
+      attributeLabel={getAttributeLabel(task, attributes, t)}
       attributeVisual={getTaskAttributeVisual(task, attributes)}
+      formatNumber={formatNumber}
       isConfirmingDelete={isConfirmingDelete}
       isCompleted={isCompleted}
       isDeleting={isDeleting}
       isSubmitting={isSubmitting}
+      language={language}
       onComplete={onComplete}
       onDelete={onDelete}
+      t={t}
       task={task}
       variant="normal"
     />
@@ -411,23 +417,29 @@ function QuestCard({
 function NormalQuestCard({
   attributeLabel,
   attributeVisual,
+  formatNumber,
   isConfirmingDelete,
   isCompleted,
   isDeleting,
   isSubmitting,
+  language,
   onComplete,
   onDelete,
+  t,
   task,
   variant = "normal",
 }: {
   attributeLabel: string;
   attributeVisual: QuestAttributeVisual;
+  formatNumber: (value: number) => string;
   isConfirmingDelete: boolean;
   isCompleted: boolean;
   isDeleting: boolean;
   isSubmitting: boolean;
+  language: "en" | "fa";
   onComplete: () => void;
   onDelete: () => void;
+  t: (key: string, params?: Record<string, number | string>) => string;
   task: TaskDefinition;
   variant?: "normal" | "avoid";
 }) {
@@ -442,7 +454,9 @@ function NormalQuestCard({
       )}
     >
       <Link
-        aria-label={`Open ${task.title} details`}
+        aria-label={t("quest.action.openDetails", {
+          title: translateGameText(task.title, language) ?? task.title,
+        })}
         className="grid min-w-0 flex-1 grid-cols-[4.25rem_minmax(0,1fr)_auto] items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-[#2f8cff]/50"
         href={`/quests/${task.id}`}
       >
@@ -452,30 +466,31 @@ function NormalQuestCard({
 
         <div className="min-w-0 space-y-1">
           <h2 className="truncate text-base font-medium leading-tight text-white">
-            {task.title}
+            {translateGameText(task.title, language)}
           </h2>
           <p className="truncate text-sm text-slate-400">{attributeLabel}</p>
           <div className="flex items-center gap-1.5 text-sm">
             <span className={cn("size-2 rounded-full", styles.dot)} />
             <span className={styles.text}>
-              {difficultyLabels[task.difficulty]}
+              {t(getDifficultyKey(task.difficulty))}
             </span>
           </div>
         </div>
 
-        <RewardSummary task={task} />
+        <RewardSummary formatNumber={formatNumber} t={t} task={task} />
       </Link>
 
       <div className="flex shrink-0 items-center gap-1.5">
         <DeleteButton
           isConfirming={isConfirmingDelete}
           isDeleting={isDeleting}
+          t={t}
           onDelete={onDelete}
         />
         <CompleteButton
           isCompleted={isCompleted}
           isSubmitting={isSubmitting}
-          label={getActionButtonLabel(task, isCompleted)}
+          label={getActionButtonLabel(task, isCompleted, t)}
           onComplete={onComplete}
           tone={variant === "avoid" ? "rose" : "emerald"}
         />
@@ -485,20 +500,26 @@ function NormalQuestCard({
 }
 
 function BossQuestCard({
+  formatNumber,
   isConfirmingDelete,
   isCompleted,
   isDeleting,
   isSubmitting,
+  language,
   onComplete,
   onDelete,
+  t,
   task,
 }: {
+  formatNumber: (value: number) => string;
   isConfirmingDelete: boolean;
   isCompleted: boolean;
   isDeleting: boolean;
   isSubmitting: boolean;
+  language: "en" | "fa";
   onComplete: () => void;
   onDelete: () => void;
+  t: (key: string, params?: Record<string, number | string>) => string;
   task: TaskDefinition;
 }) {
   return (
@@ -519,26 +540,28 @@ function BossQuestCard({
 
       <div className="relative grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
         <Link
-          aria-label={`Open ${task.title} details`}
+          aria-label={t("quest.action.openDetails", {
+            title: translateGameText(task.title, language) ?? task.title,
+          })}
           className="min-w-0 space-y-2 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-violet-400/50"
           href={`/quests/${task.id}`}
         >
           <div className="space-y-1">
-            <p className="text-sm font-semibold text-violet-400">Boss Quest</p>
+            <p className="text-sm font-semibold text-violet-400">{t("common.bossQuest")}</p>
             <h2 className="truncate text-xl font-semibold leading-tight text-white">
-              {task.title}
+              {translateGameText(task.title, language)}
             </h2>
             <p className="truncate text-sm text-slate-300">
-              {task.description}
+              {translateGameText(task.description, language)}
             </p>
           </div>
 
           <div className="flex items-center justify-between gap-3 pr-1">
             <div className="flex items-center gap-1.5 text-sm">
               <span className="size-2.5 rounded-full bg-rose-500" />
-              <span className="text-rose-400">Hard</span>
+              <span className="text-rose-400">{t("difficulty.hard")}</span>
             </div>
-            <RewardSummary task={task} tone="violet" />
+            <RewardSummary formatNumber={formatNumber} t={t} task={task} tone="violet" />
           </div>
         </Link>
 
@@ -547,11 +570,16 @@ function BossQuestCard({
             isConfirming={isConfirmingDelete}
             isDeleting={isDeleting}
             onDelete={onDelete}
+            t={t}
           />
           <CompleteButton
             isCompleted={isCompleted}
             isSubmitting={isSubmitting}
-            label={isCompleted ? "Boss quest completed" : "Complete boss quest"}
+            label={
+              isCompleted
+                ? t("quest.action.bossCompleted")
+                : t("quest.action.completeBoss")
+            }
             onComplete={onComplete}
             tone="violet"
           />
@@ -609,14 +637,20 @@ function DeleteButton({
   isConfirming,
   isDeleting,
   onDelete,
+  t,
 }: {
   isConfirming: boolean;
   isDeleting: boolean;
   onDelete: () => void;
+  t: (key: string) => string;
 }) {
   return (
     <Button
-      aria-label={isConfirming ? "Confirm delete quest" : "Delete quest"}
+      aria-label={
+        isConfirming
+          ? t("quest.action.confirmDelete")
+          : t("quest.action.deleteQuest")
+      }
       className={cn(
         "h-9 rounded-full border border-slate-700/70 bg-transparent text-slate-500 transition-all hover:border-rose-400/70 hover:bg-rose-950/25 hover:text-rose-200",
         isConfirming ? "w-16 px-2 text-xs text-rose-200" : "w-9 px-0",
@@ -629,7 +663,7 @@ function DeleteButton({
       {isDeleting ? (
         <Trash2 className="size-4 animate-pulse" />
       ) : isConfirming ? (
-        "Delete"
+        t("action.delete")
       ) : (
         <Trash2 className="size-4" />
       )}
@@ -638,15 +672,23 @@ function DeleteButton({
 }
 
 function RewardSummary({
+  formatNumber,
   task,
+  t,
   tone = "blue",
 }: {
+  formatNumber: (value: number) => string;
   task: TaskDefinition;
+  t: (key: string) => string;
   tone?: "blue" | "violet";
 }) {
   const extras = [
-    task.coinReward > 0 ? `${formatNumber(task.coinReward)} coins` : null,
-    task.gemReward > 0 ? `${formatNumber(task.gemReward)} gems` : null,
+    task.coinReward > 0
+      ? `${formatNumber(task.coinReward)} ${t("common.coins")}`
+      : null,
+    task.gemReward > 0
+      ? `${formatNumber(task.gemReward)} ${t("common.gems")}`
+      : null,
   ].filter(Boolean);
 
   return (
@@ -696,17 +738,24 @@ function buildProgressionModals(
   task: TaskDefinition,
   result: CompletionResult,
   snapshot: GameSnapshot,
+  i18n: {
+    formatNumber: (value: number) => string;
+    language: "en" | "fa";
+    t: (key: string, params?: Record<string, number | string>) => string;
+  },
 ): ProgressionModalData[] {
   const modals: ProgressionModalData[] = [];
 
   if (task.kind === "boss") {
     modals.push({
-      actionLabel: "Claim Reward",
-      eyebrow: "Boss Defeated",
+      actionLabel: i18n.t("action.claimReward"),
+      eyebrow: i18n.t("modal.bossDefeated"),
       id: `boss-${result.completion.id}`,
-      rewardLabel: `+${formatNumber(result.completion.earnedXp)} XP`,
-      subtitle: `You conquered ${task.title}.`,
-      title: "Boss Defeated",
+      rewardLabel: `+${i18n.formatNumber(result.completion.earnedXp)} XP`,
+      subtitle: i18n.t("modal.youConquered", {
+        title: translateGameText(task.title, i18n.language) ?? task.title,
+      }),
+      title: i18n.t("modal.bossDefeated"),
       variant: "boss",
     });
   }
@@ -717,14 +766,18 @@ function buildProgressionModals(
     level += 1
   ) {
     modals.push({
-      actionLabel: "Continue",
-      eyebrow: "Level Up",
+      actionLabel: i18n.t("action.continue"),
+      eyebrow: i18n.t("modal.levelUp"),
       id: `level-${result.completion.id}-${level}`,
       level,
-      rewardLabel: `Level ${level}`,
-      stats: buildCompletionStats(result),
-      subtitle: `You reached Level ${level}. Your power grows stronger.`,
-      title: "Level Up!",
+      rewardLabel: i18n.t("modal.levelReward", {
+        level: i18n.formatNumber(level),
+      }),
+      stats: buildCompletionStats(result, i18n),
+      subtitle: i18n.t("modal.levelSubtitle", {
+        level: i18n.formatNumber(level),
+      }),
+      title: i18n.t("modal.levelUpBang"),
       variant: "level-up",
     });
   }
@@ -738,7 +791,7 @@ function buildProgressionModals(
       continue;
     }
 
-    modals.push(buildAchievementModal(achievement));
+    modals.push(buildAchievementModal(achievement, i18n));
   }
 
   return modals;
@@ -746,6 +799,11 @@ function buildProgressionModals(
 
 function buildAchievementModal(
   achievement: AchievementDefinition,
+  i18n: {
+    formatNumber: (value: number) => string;
+    language: "en" | "fa";
+    t: (key: string) => string;
+  },
 ): ProgressionModalData {
   const isBadge =
     achievement.category === "medal" ||
@@ -753,38 +811,52 @@ function buildAchievementModal(
     achievement.category === "title";
 
   return {
-    actionLabel: isBadge ? "Nice!" : "Awesome!",
-    eyebrow: isBadge ? "Badge Earned" : "Achievement Unlocked",
+    actionLabel: isBadge ? i18n.t("action.nice") : i18n.t("action.awesome"),
+    eyebrow: isBadge ? i18n.t("modal.badgeEarned") : i18n.t("modal.achievementUnlocked"),
     id: `achievement-${achievement.key}`,
     imageSrc: achievement.medalImage,
-    rewardLabel: formatAchievementReward(achievement),
-    subtitle: achievement.description,
-    title: achievement.title,
+    rewardLabel: formatAchievementReward(achievement, i18n),
+    subtitle:
+      translateGameText(achievement.description, i18n.language) ??
+      achievement.description,
+    title: translateGameText(achievement.title, i18n.language) ?? achievement.title,
     variant: isBadge ? "badge" : "achievement",
   };
 }
 
-function buildCompletionStats(result: CompletionResult) {
+function buildCompletionStats(
+  result: CompletionResult,
+  i18n: {
+    formatNumber: (value: number) => string;
+    t: (key: string) => string;
+  },
+) {
   return [
-    { label: "XP", value: `+${formatNumber(result.completion.earnedXp)}` },
+    { label: "XP", value: `+${i18n.formatNumber(result.completion.earnedXp)}` },
     {
-      label: "Coins",
-      value: `+${formatNumber(result.completion.earnedCoins)}`,
+      label: i18n.t("common.coins"),
+      value: `+${i18n.formatNumber(result.completion.earnedCoins)}`,
     },
     {
-      label: "Gems",
-      value: `+${formatNumber(result.completion.earnedGems)}`,
+      label: i18n.t("common.gems"),
+      value: `+${i18n.formatNumber(result.completion.earnedGems)}`,
     },
   ];
 }
 
-function formatAchievementReward(achievement: AchievementDefinition) {
+function formatAchievementReward(
+  achievement: AchievementDefinition,
+  i18n: {
+    formatNumber: (value: number) => string;
+    t: (key: string) => string;
+  },
+) {
   const rewards = [
     achievement.coinReward > 0
-      ? `+${formatNumber(achievement.coinReward)} coins`
+      ? `+${i18n.formatNumber(achievement.coinReward)} ${i18n.t("common.coins")}`
       : null,
     achievement.gemReward > 0
-      ? `+${formatNumber(achievement.gemReward)} gems`
+      ? `+${i18n.formatNumber(achievement.gemReward)} ${i18n.t("common.gems")}`
       : null,
   ].filter(Boolean);
 
@@ -852,32 +924,44 @@ function shouldShowTaskForTab(
   return false;
 }
 
-function getEmptyStateMessage(activeTab: QuestTab) {
+function getEmptyStateMessage(
+  activeTab: QuestTab,
+  t: (key: string) => string,
+) {
   const messages: Record<QuestTab, string> = {
-    All: "No active quests yet. Create one to start leveling.",
-    Daily: "No daily quests yet. Create one to build your streak.",
-    Goals: "No active goals yet. Create a one-time quest to start moving.",
-    Bosses: "No boss quests waiting. Create a boss when you need a serious fight.",
-    Challenges: "No hard challenges yet. Hard goals will appear here.",
-    Avoid: "No avoid quests yet. Create one to track what you are not doing.",
-    Completed: "No completed quests yet today. Finish something and it will land here.",
+    All: t("quest.emptyAll"),
+    Daily: t("quest.emptyDaily"),
+    Goals: t("quest.emptyGoals"),
+    Bosses: t("quest.emptyBosses"),
+    Challenges: t("quest.emptyChallenges"),
+    Avoid: t("quest.emptyAvoid"),
+    Completed: t("quest.emptyCompleted"),
   };
 
   return messages[activeTab];
 }
 
-function getActionButtonLabel(task: TaskDefinition, isCompleted: boolean) {
+function getActionButtonLabel(
+  task: TaskDefinition,
+  isCompleted: boolean,
+  t: (key: string) => string,
+) {
   if (task.kind === "avoid") {
-    return isCompleted ? "Avoid quest completed" : "Record penalty";
+    return isCompleted
+      ? t("quest.action.avoidCompleted")
+      : t("action.recordPenalty");
   }
 
-  return isCompleted ? "Quest completed" : "Complete quest";
+  return isCompleted
+    ? t("quest.action.questCompleted")
+    : t("quest.action.completeQuest");
 }
 
 function taskMatchesSearch(
   task: TaskDefinition,
   attributes: AttributeProgress[],
   searchQuery: string,
+  t: (key: string) => string,
 ) {
   const normalizedQuery = searchQuery.trim().toLowerCase();
 
@@ -890,7 +974,7 @@ function taskMatchesSearch(
     task.description,
     task.kind,
     task.difficulty,
-    getAttributeLabel(task, attributes),
+    getAttributeLabel(task, attributes, t),
   ]
     .filter(Boolean)
     .join(" ")
@@ -918,25 +1002,31 @@ function getTaskAttributeVisual(
 function getAttributeLabel(
   task: TaskDefinition,
   attributes: Array<AttributeProgress>,
+  t: (key: string) => string,
 ) {
   const labels = task.attributes.map((attribute) => {
     const storedAttribute = attributes.find(
       (candidate) => candidate.key === attribute.key,
     );
 
-    return storedAttribute?.label ?? getAttributeFallbackLabel(attribute.key);
+    return storedAttribute?.isDefault
+      ? getAttributeFallbackLabel(attribute.key, t)
+      : storedAttribute?.label ?? getAttributeFallbackLabel(attribute.key, t);
   });
 
   if (labels.length <= 1) {
-    return labels[0] ?? "General";
+    return labels[0] ?? t("attribute.general");
   }
 
   return `${labels[0]} +${labels.length - 1}`;
 }
 
-function getAttributeFallbackLabel(key: AttributeKey) {
+function getAttributeFallbackLabel(
+  key: AttributeKey,
+  t: (key: string) => string,
+) {
   if (isCoreAttributeKey(key)) {
-    return coreAttributeLabels[key];
+    return t(`attribute.${key}`);
   }
 
   return key
@@ -944,5 +1034,13 @@ function getAttributeFallbackLabel(key: AttributeKey) {
     .split("-")
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ") || "Custom";
+    .join(" ") || t("attribute.custom");
+}
+
+function getDifficultyKey(difficulty: TaskDifficulty) {
+  return difficulty === "medium"
+    ? "difficulty.medium"
+    : difficulty === "easy"
+      ? "difficulty.easy"
+      : "difficulty.hard";
 }

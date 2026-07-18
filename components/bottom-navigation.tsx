@@ -10,37 +10,39 @@ import {
   Trophy,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 
 const navigationItems = [
   {
     href: "/",
-    label: "Profile",
+    labelKey: "common.profile",
     icon: Compass,
   },
   {
     href: "/quests",
-    label: "Quests",
+    labelKey: "common.quests",
     icon: ClipboardList,
   },
   {
     href: "/store",
-    label: "Store",
+    labelKey: "common.store",
     icon: ShoppingBag,
   },
   {
     href: "/analytics",
-    label: "Analytics",
+    labelKey: "common.analytics",
     icon: ChartNoAxesColumn,
   },
   {
     href: "/hall-of-fame",
-    label: "Hall of Fame",
+    labelKey: "common.hallOfFame",
     icon: Trophy,
   },
 ];
 
 export default function BottomNavigation() {
   const pathname = usePathname();
+  const { t } = useI18n();
 
   return (
     <nav className="fixed inset-x-0 bottom-5 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
@@ -79,7 +81,7 @@ export default function BottomNavigation() {
                   )}
                 />
               </span>
-              <span className="w-full truncate text-center">{item.label}</span>
+              <span className="w-full truncate text-center">{t(item.labelKey)}</span>
             </Link>
           );
         })}

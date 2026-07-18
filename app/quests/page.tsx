@@ -9,6 +9,7 @@ import type { QuestTab } from "@/components/quests-header";
 import QuestListSection from "@/components/quest-list-section";
 import CreateQuestFab from "@/components/create-quest-fab";
 import TodayStreakCard from "@/components/today-streak-card";
+import { useI18n } from "@/lib/i18n";
 
 export default function QuestsPage() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function QuestsPage() {
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [questRevision, setQuestRevision] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const { t } = useI18n();
 
   return (
     <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
@@ -32,12 +34,12 @@ export default function QuestsPage() {
             autoFocus
             className="h-10 min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-slate-600"
             onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Search quests"
+            placeholder={t("quest.searchPlaceholder")}
             value={searchQuery}
           />
           {searchQuery && (
             <Button
-              aria-label="Clear quest search"
+              aria-label={t("action.clearQuestSearch")}
               className="size-9 rounded-xl text-slate-300 hover:bg-slate-800/80 hover:text-white"
               onClick={() => setSearchQuery("")}
               size="icon"

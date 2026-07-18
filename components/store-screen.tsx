@@ -29,6 +29,7 @@ import type {
   Currency as GameCurrency,
   StoreReward,
 } from "@/lib/indexed-db/types";
+import { translateGameText, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useGameSnapshot } from "@/hooks/use-game-snapshot";
 
@@ -66,13 +67,19 @@ const toneStyles: Record<RewardTone, string> = {
   green: "from-emerald-500/25 to-emerald-950/35 text-emerald-300",
 };
 
-const formatAmount = (amount: number) =>
-  new Intl.NumberFormat("en-US").format(amount);
-
-const weekDayLabels = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const weekDayLabelKeys = [
+  "store.weekday.sunday",
+  "store.weekday.monday",
+  "store.weekday.tuesday",
+  "store.weekday.wednesday",
+  "store.weekday.thursday",
+  "store.weekday.friday",
+  "store.weekday.saturday",
+];
 
 export default function StoreScreen() {
   const { error, isLoading, refresh, snapshot } = useGameSnapshot();
+  const { formatNumber, language, t } = useI18n();
   const [purchasingRewardId, setPurchasingRewardId] = useState<string | null>(
     null,
   );
@@ -118,7 +125,7 @@ export default function StoreScreen() {
   const inventoryCount = snapshot?.rewardPurchases.length ?? 0;
   const weeklyOffDay = snapshot?.progress.weeklyOffDay ?? 5;
   const isStoreOpen = snapshot ? isOffDay(toAppDate(), weeklyOffDay) : false;
-  const freeDayLabel = weekDayLabels[weeklyOffDay] ?? "your free day";
+  const freeDayLabel = t(weekDayLabelKeys[weeklyOffDay] ?? "store.freeDay");
 
   async function purchaseReward(reward: StoreReward) {
     try {
@@ -126,7 +133,11 @@ export default function StoreScreen() {
       setPurchasingRewardId(reward.id);
       await rewardService.purchase(reward.id);
       await refresh();
-      setNotice(`${reward.title} added to inventory.`);
+      setNotice(
+        t("store.addedInventory", {
+          title: translateGameText(reward.title, language) ?? reward.title,
+        }),
+      );
       setSelectedReward(null);
     } catch (caughtError) {
       setNotice(
@@ -141,7 +152,7 @@ export default function StoreScreen() {
 
   return (
     <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
-      <StoreHeader coins={coins} gems={gems} />
+      <StoreHeader coins={coins} formatNumber={formatNumber} gems={gems} t={t} />
 
       {notice && (
         <p className="rounded-xl border border-[#2f8cff]/45 bg-blue-950/25 px-3 py-2 text-sm text-blue-100">
@@ -162,35 +173,46 @@ export default function StoreScreen() {
           <StoreStatusCard
             freeDayLabel={freeDayLabel}
             isStoreOpen={isStoreOpen}
+            t={t}
           />
           {featuredReward && (
             <FeaturedReward
               onSelect={() => setSelectedReward(featuredReward)}
               reward={featuredReward}
+              formatNumber={formatNumber}
+              language={language}
+              t={t}
             />
           )}
           <CategoryStrip
             activeCategory={activeCategory}
             onCategoryChange={setActiveCategory}
+            t={t}
           />
           <RewardsList
             categoryLabel={activeCategoryLabel}
             coins={coins}
+            formatNumber={formatNumber}
             gems={gems}
+            language={language}
             onSelect={setSelectedReward}
             rewards={filteredRewards}
+            t={t}
           />
-          <InventoryRow count={inventoryCount} />
+          <InventoryRow count={inventoryCount} t={t} />
           {selectedReward && (
             <RewardDetailDialog
               coins={coins}
+              formatNumber={formatNumber}
               freeDayLabel={freeDayLabel}
               gems={gems}
               isPurchasing={purchasingRewardId === selectedReward.id}
               isStoreOpen={isStoreOpen}
+              language={language}
               onClose={() => setSelectedReward(null)}
               onPurchase={() => purchaseReward(selectedReward)}
               reward={selectedReward}
+              t={t}
             />
           )}
         </>
@@ -199,23 +221,33 @@ export default function StoreScreen() {
   );
 }
 
-function StoreHeader({ coins, gems }: { coins: number; gems: number }) {
+function StoreHeader({
+  coins,
+  formatNumber,
+  gems,
+  t,
+}: {
+  coins: number;
+  formatNumber: (value: number) => string;
+  gems: number;
+  t: (key: string) => string;
+}) {
   return (
     <header className="flex items-center justify-between gap-3 pt-1">
       <h1 className="text-3xl font-semibold leading-none tracking-[-0.03em] text-white">
-        Store
+        {t("common.store")}
       </h1>
 
       <div className="flex min-w-0 shrink-0 items-center gap-2">
-        <CurrencyPill currency="coins" value={coins} />
-        <CurrencyPill currency="gems" value={gems} />
+        <CurrencyPill currency="coins" formatNumber={formatNumber} value={coins} />
+        <CurrencyPill currency="gems" formatNumber={formatNumber} value={gems} />
         <Button
           asChild
           className="size-10 rounded-full border border-[#2f8cff]/60 bg-[#07111f]/80 text-white shadow-[0_8px_24px_rgba(0,0,0,0.32),inset_0_1px_18px_rgba(99,148,216,0.08)] hover:bg-[#0b1728]"
           size="icon"
           variant="ghost"
         >
-          <Link aria-label="Create custom reward" href="/store/rewards/create">
+          <Link aria-label={t("action.createCustomReward")} href="/store/rewards/create">
             <Plus className="size-5" />
           </Link>
         </Button>
@@ -227,9 +259,11 @@ function StoreHeader({ coins, gems }: { coins: number; gems: number }) {
 function StoreStatusCard({
   freeDayLabel,
   isStoreOpen,
+  t,
 }: {
   freeDayLabel: string;
   isStoreOpen: boolean;
+  t: (key: string, params?: Record<string, number | string>) => string;
 }) {
   return (
     <section
@@ -257,12 +291,12 @@ function StoreStatusCard({
         </div>
         <div className="min-w-0">
           <h2 className="text-lg font-semibold leading-tight text-white">
-            {isStoreOpen ? "Free Day Store Open" : "Store Closed"}
+            {isStoreOpen ? t("store.statusOpen") : t("store.closed")}
           </h2>
           <p className="mt-1 text-sm leading-relaxed text-slate-300">
             {isStoreOpen
-              ? "Today is your free day. Purchases are open."
-              : `Purchases are only available on ${freeDayLabel}. You can still browse rewards and track how close you are.`}
+              ? t("store.openBody")
+              : t("store.closedBody", { day: freeDayLabel })}
           </p>
         </div>
       </div>
@@ -271,22 +305,28 @@ function StoreStatusCard({
 }
 
 function FeaturedReward({
+  formatNumber,
+  language,
   onSelect,
   reward,
+  t,
 }: {
+  formatNumber: (value: number) => string;
+  language: "en" | "fa";
   onSelect: () => void;
   reward: StoreReward;
+  t: (key: string) => string;
 }) {
   return (
     <section className="space-y-2">
       <div className="flex items-center justify-between px-1">
-        <h2 className="text-sm font-medium text-white">Featured Reward</h2>
+        <h2 className="text-sm font-medium text-white">{t("store.featuredReward")}</h2>
         <Button
           asChild
           className="h-auto px-0 text-sm font-medium text-[#4f8cff] hover:text-[#78a8ff]"
           variant="link"
         >
-          <Link href="/store/rewards/create">Create Custom</Link>
+          <Link href="/store/rewards/create">{t("action.createCustom")}</Link>
         </Button>
       </div>
 
@@ -302,16 +342,16 @@ function FeaturedReward({
           <div className="min-w-0 space-y-3">
             <div className="space-y-1">
               <h3 className="max-w-44 text-2xl font-semibold leading-none text-white">
-                {reward.title}
+                {translateGameText(reward.title, language)}
               </h3>
               <p className="text-sm font-medium text-violet-300">
-                {formatRewardKind(reward.kind)}{" "}
+                {formatRewardKind(reward.kind, t)}{" "}
                 <Sparkles className="ml-1 inline size-3" />
               </p>
             </div>
             <div className="flex items-center gap-2 text-xl font-semibold text-white">
               <CurrencyIcon currency={reward.currency} />
-              <span>{formatAmount(reward.cost)}</span>
+              <span>{formatNumber(reward.cost)}</span>
             </div>
           </div>
 
@@ -327,13 +367,15 @@ function FeaturedReward({
 function CategoryStrip({
   activeCategory,
   onCategoryChange,
+  t,
 }: {
   activeCategory: StoreCategoryValue;
   onCategoryChange: (category: StoreCategoryValue) => void;
+  t: (key: string) => string;
 }) {
   return (
     <section className="space-y-2">
-      <h2 className="px-1 text-sm font-medium text-white">Categories</h2>
+      <h2 className="px-1 text-sm font-medium text-white">{t("common.categories")}</h2>
       <div className="-mx-3 overflow-x-auto px-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="flex min-w-max gap-2">
           {categories.map((category) => {
@@ -354,7 +396,7 @@ function CategoryStrip({
                 variant={isActive ? "default" : "ghost"}
               >
                 <Icon className="size-5" />
-                {category.label}
+                {getCategoryLabel(category.label, t)}
               </Button>
             );
           })}
@@ -367,34 +409,45 @@ function CategoryStrip({
 function RewardsList({
   categoryLabel,
   coins,
+  formatNumber,
   gems,
+  language,
   onSelect,
   rewards,
+  t,
 }: {
   categoryLabel: string;
   coins: number;
+  formatNumber: (value: number) => string;
   gems: number;
+  language: "en" | "fa";
   onSelect: (reward: StoreReward) => void;
   rewards: StoreReward[];
+  t: (key: string, params?: Record<string, number | string>) => string;
 }) {
   return (
     <section className="space-y-2">
-      <h2 className="px-1 text-sm font-medium text-white">Rewards</h2>
+      <h2 className="px-1 text-sm font-medium text-white">{t("common.rewards")}</h2>
       <div className="space-y-1.5">
         {rewards.length === 0 ? (
           <p className="rounded-xl border border-slate-700/55 bg-[#07111f]/82 p-4 text-sm text-slate-300">
             {categoryLabel === "All"
-              ? "No rewards yet."
-              : `No ${categoryLabel.toLowerCase()} rewards yet.`}{" "}
-            Create one to make the grind worth spending.
+              ? t("store.noRewards")
+              : t("store.noCategoryRewards", {
+                  category: getCategoryLabel(categoryLabel, t).toLowerCase(),
+                })}{" "}
+            {t("store.createWorth")}
           </p>
         ) : (
           rewards.map((reward) => (
             <RewardRow
               canAfford={canAfford(reward, coins, gems)}
+              formatNumber={formatNumber}
               key={reward.id}
+              language={language}
               onSelect={() => onSelect(reward)}
               reward={reward}
+              t={t}
             />
           ))
         )}
@@ -405,12 +458,18 @@ function RewardsList({
 
 function RewardRow({
   canAfford,
+  formatNumber,
+  language,
   onSelect,
   reward,
+  t,
 }: {
   canAfford: boolean;
+  formatNumber: (value: number) => string;
+  language: "en" | "fa";
   onSelect: () => void;
   reward: StoreReward;
+  t: (key: string) => string;
 }) {
   const visual = getRewardVisual(reward);
   const Icon = visual.icon;
@@ -432,10 +491,10 @@ function RewardRow({
 
       <div className="min-w-0 space-y-1">
         <h3 className="truncate text-base font-medium leading-tight text-white">
-          {reward.title}
+          {translateGameText(reward.title, language)}
         </h3>
         <p className="truncate text-xs text-slate-400">
-          {reward.description ?? formatRewardKind(reward.kind)}
+          {translateGameText(reward.description, language) ?? formatRewardKind(reward.kind, t)}
         </p>
       </div>
 
@@ -447,7 +506,7 @@ function RewardRow({
           )}
         >
           <CurrencyIcon currency={reward.currency} />
-          <span>{formatAmount(reward.cost)}</span>
+          <span>{formatNumber(reward.cost)}</span>
         </div>
         <ChevronRight className="size-5 text-white" />
       </div>
@@ -455,7 +514,13 @@ function RewardRow({
   );
 }
 
-function InventoryRow({ count }: { count: number }) {
+function InventoryRow({
+  count,
+  t,
+}: {
+  count: number;
+  t: (key: string) => string;
+}) {
   return (
     <Link
       className="grid grid-cols-[4.25rem_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-slate-700/55 bg-[#07111f]/82 p-2.5 font-sans shadow-[0_8px_22px_rgba(0,0,0,0.24),inset_0_1px_16px_rgba(99,148,216,0.05)] backdrop-blur-xl transition hover:border-[#2f8cff]/55 hover:bg-[#0b1728]/90"
@@ -466,10 +531,10 @@ function InventoryRow({ count }: { count: number }) {
       </div>
       <div className="min-w-0 space-y-1">
         <h3 className="truncate text-base font-medium leading-tight text-white">
-          Inventory
+          {t("common.inventory")}
         </h3>
         <p className="truncate text-xs text-slate-400">
-          See your owned rewards
+          {t("store.inventoryBody")}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-3">
@@ -484,22 +549,28 @@ function InventoryRow({ count }: { count: number }) {
 
 function RewardDetailDialog({
   coins,
+  formatNumber,
   freeDayLabel,
   gems,
   isPurchasing,
   isStoreOpen,
+  language,
   onClose,
   onPurchase,
   reward,
+  t,
 }: {
   coins: number;
+  formatNumber: (value: number) => string;
   freeDayLabel: string;
   gems: number;
   isPurchasing: boolean;
   isStoreOpen: boolean;
+  language: "en" | "fa";
   onClose: () => void;
   onPurchase: () => void;
   reward: StoreReward;
+  t: (key: string, params?: Record<string, number | string>) => string;
 }) {
   const visual = getRewardVisual(reward);
   const Icon = visual.icon;
@@ -520,14 +591,14 @@ function RewardDetailDialog({
         <header className="mb-3 flex shrink-0 items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">
-              Savings Goal
+              {t("store.savingsGoal")}
             </p>
             <h2 className="mt-1 truncate text-2xl font-semibold tracking-[-0.03em] text-white">
-              {reward.title}
+              {translateGameText(reward.title, language)}
             </h2>
           </div>
           <Button
-            aria-label="Close reward details"
+            aria-label={t("action.closeRewardDetails")}
             className="size-10 rounded-full border border-slate-700/70 bg-[#07111f]/80 text-white hover:bg-[#0b1728]"
             onClick={onClose}
             size="icon"
@@ -557,10 +628,10 @@ function RewardDetailDialog({
                 ) : (
                   <LockKeyhole className="size-3.5" />
                 )}
-                {isStoreOpen ? "Store Open" : "Store Closed"}
+                {isStoreOpen ? t("store.open") : t("store.closed")}
               </span>
               <span className="text-xs font-medium text-slate-400">
-                {isStoreOpen ? "Open today" : `Opens ${freeDayLabel}`}
+                {isStoreOpen ? t("store.openToday") : t("store.opensDay", { day: freeDayLabel })}
               </span>
             </div>
 
@@ -577,21 +648,21 @@ function RewardDetailDialog({
 
             <div className="min-h-0 space-y-1">
               <p className="text-sm font-medium text-[#5aa0ff]">
-                {formatRewardKind(reward.kind)}
+                {formatRewardKind(reward.kind, t)}
               </p>
               <h3 className="truncate text-2xl font-semibold leading-tight text-white">
-                {reward.title}
+                {translateGameText(reward.title, language)}
               </h3>
               <p className="overflow-hidden text-sm leading-relaxed text-slate-400 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-                {reward.description ??
-                  "Keep earning until this reward is ready to claim."}
+                {translateGameText(reward.description, language) ??
+                  t("store.keepEarning")}
               </p>
             </div>
 
             <div className="mt-4 shrink-0 space-y-2 sm:mt-5">
               <div className="flex items-center justify-between gap-3 text-sm">
                 <span className="font-semibold text-white">
-                  {formatAmount(balance)} / {formatAmount(reward.cost)}
+                  {formatNumber(balance)} / {formatNumber(reward.cost)}
                 </span>
                 <span className="text-slate-400">{progressPercent}%</span>
               </div>
@@ -605,23 +676,23 @@ function RewardDetailDialog({
 
             <div className="mt-4 grid shrink-0 grid-cols-2 gap-2 sm:mt-5">
               <DetailStat
-                label="Balance"
+                label={t("common.balance")}
                 value={
                   <span className="inline-flex items-center gap-1.5">
                     <CurrencyIcon currency={reward.currency} />
-                    {formatAmount(balance)}
+                    {formatNumber(balance)}
                   </span>
                 }
               />
               <DetailStat
-                label="Remaining"
+                label={t("common.remaining")}
                 value={
                   remaining === 0 ? (
-                    "Ready"
+                    t("store.ready")
                   ) : (
                     <span className="inline-flex items-center gap-1.5">
                       <CurrencyIcon currency={reward.currency} />
-                      {formatAmount(remaining)}
+                      {formatNumber(remaining)}
                     </span>
                   )
                 }
@@ -629,10 +700,9 @@ function RewardDetailDialog({
             </div>
 
             <div className="mt-4 shrink-0 rounded-2xl border border-slate-700/55 bg-[#030914]/55 p-3 sm:mt-5">
-              <p className="text-xs text-slate-500">Motivation</p>
+              <p className="text-xs text-slate-500">{t("common.motivation")}</p>
               <p className="mt-1 overflow-hidden text-sm leading-relaxed text-slate-200 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-                You&apos;re doing great. Keep completing quests and claim it on
-                your free day.
+                {t("store.motivationBody")}
               </p>
             </div>
 
@@ -645,10 +715,12 @@ function RewardDetailDialog({
               >
                 {getPurchaseButtonLabel({
                   freeDayLabel,
+                  formatNumber,
                   isPurchasing,
                   isStoreOpen,
                   remaining,
                   reward,
+                  t,
                 })}
               </Button>
             </div>
@@ -676,30 +748,37 @@ function DetailStat({
 
 function getPurchaseButtonLabel({
   freeDayLabel,
+  formatNumber,
   isPurchasing,
   isStoreOpen,
   remaining,
   reward,
+  t,
 }: {
   freeDayLabel: string;
+  formatNumber: (value: number) => string;
   isPurchasing: boolean;
   isStoreOpen: boolean;
   remaining: number;
   reward: StoreReward;
+  t: (key: string, params?: Record<string, number | string>) => string;
 }) {
   if (isPurchasing) {
-    return "Purchasing...";
+    return t("store.purchasing");
   }
 
   if (!isStoreOpen) {
-    return `Store opens on ${freeDayLabel}`;
+    return t("store.opensDay", { day: freeDayLabel });
   }
 
   if (remaining > 0) {
-    return `${formatAmount(remaining)} ${reward.currency} left`;
+    return t("store.left", {
+      amount: formatNumber(remaining),
+      currency: t(reward.currency === "coins" ? "common.coins" : "common.gems"),
+    });
   }
 
-  return "Purchase Reward";
+  return t("action.purchaseReward");
 }
 
 function StoreSkeleton() {
@@ -719,15 +798,17 @@ function StoreSkeleton() {
 
 function CurrencyPill({
   currency,
+  formatNumber,
   value,
 }: {
   currency: GameCurrency;
+  formatNumber: (value: number) => string;
   value: number;
 }) {
   return (
     <div className="flex h-7 items-center gap-1.5 rounded-lg border border-slate-700/60 bg-[#07111f]/80 px-2 text-sm font-medium text-white">
       <CurrencyIcon currency={currency} />
-      <span>{formatAmount(value)}</span>
+      <span>{formatNumber(value)}</span>
     </div>
   );
 }
@@ -756,15 +837,29 @@ function canAfford(reward: StoreReward, coins: number, gems: number) {
   return reward.currency === "coins" ? coins >= reward.cost : gems >= reward.cost;
 }
 
-function formatRewardKind(kind: StoreReward["kind"]) {
+function formatRewardKind(kind: StoreReward["kind"], t: (key: string) => string) {
   const labels: Record<StoreReward["kind"], string> = {
-    custom: "Custom Reward",
-    digital: "Digital Reward",
-    experience: "Experience Reward",
-    physical: "Physical Reward",
+    custom: t("store.customReward"),
+    digital: t("store.digitalReward"),
+    experience: t("store.experienceReward"),
+    physical: t("store.physicalReward"),
   };
 
   return labels[kind];
+}
+
+function getCategoryLabel(label: string, t: (key: string) => string) {
+  const labels: Record<string, string> = {
+    All: t("quest.all"),
+    Custom: t("attribute.custom"),
+    Digital: t("store.digital"),
+    Fun: t("store.fun"),
+    Physical: t("store.physical"),
+    Premium: t("store.premium"),
+    Rewards: t("common.rewards"),
+  };
+
+  return labels[label] ?? label;
 }
 
 function getRewardVisual(reward: StoreReward): RewardVisual {

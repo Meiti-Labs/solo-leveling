@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { notificationService } from "@/lib/game";
 import type { AppNotification, NotificationType } from "@/lib/indexed-db/types";
+import { translateGameText, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useGameSnapshot } from "@/hooks/use-game-snapshot";
 
@@ -28,6 +29,7 @@ const toneStyles: Record<NotificationTone, string> = {
 
 export default function NotificationsPage() {
   const { error, isLoading, refresh, snapshot } = useGameSnapshot();
+  const { formatDate, language, t } = useI18n();
 
   useEffect(() => {
     if (!snapshot?.notifications.some((notification) => !notification.readAt)) {
@@ -52,16 +54,16 @@ export default function NotificationsPage() {
             size="icon"
             variant="ghost"
           >
-            <Link aria-label="Back home" href="/">
+            <Link aria-label={t("action.backHome")} href="/">
               <ArrowLeft className="size-5" />
             </Link>
           </Button>
           <div className="min-w-0">
             <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#5aa0ff]">
-              Local Inbox
+              {t("common.localInbox")}
             </p>
             <h1 className="truncate text-2xl font-semibold leading-none tracking-[-0.03em] text-white">
-              Notifications
+              {t("common.notifications")}
             </h1>
           </div>
         </div>
@@ -91,18 +93,21 @@ export default function NotificationsPage() {
             <Bell className="size-6" />
           </div>
           <h2 className="text-base font-semibold text-white">
-            No notifications yet
+            {t("notification.emptyTitle")}
           </h2>
           <p className="mt-1 text-sm text-slate-400">
-            Level ups, achievements, badges, and boss wins will appear here.
+            {t("notification.emptyBody")}
           </p>
         </section>
       ) : (
         <section className="space-y-2">
           {notifications.map((notification) => (
             <NotificationRow
+              formatDate={formatDate}
               key={notification.id}
+              language={language}
               notification={notification}
+              t={t}
             />
           ))}
         </section>
@@ -112,9 +117,15 @@ export default function NotificationsPage() {
 }
 
 function NotificationRow({
+  formatDate,
+  language,
   notification,
+  t,
 }: {
+  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
+  language: "en" | "fa";
   notification: AppNotification;
+  t: (key: string) => string;
 }) {
   const visual = getNotificationVisual(notification.type);
   const Icon = visual.icon;
@@ -131,13 +142,14 @@ function NotificationRow({
       </div>
       <div className="min-w-0">
         <h2 className="truncate text-base font-medium text-white">
-          {notification.title}
+          {translateGameText(notification.title, language)}
         </h2>
         <p className="truncate text-sm text-slate-400">
-          {notification.description ?? "Progress updated"}
+          {translateGameText(notification.description, language) ??
+            t("activity.progressUpdated")}
         </p>
         <p className="mt-1 text-xs text-slate-500">
-          {formatNotificationDate(notification.occurredAt)}
+          {formatNotificationDate(notification.occurredAt, formatDate)}
         </p>
       </div>
       {notification.readAt ? (
@@ -165,11 +177,14 @@ function getNotificationVisual(type: NotificationType) {
   return { icon: Skull, tone: "rose" as const };
 }
 
-function formatNotificationDate(date: string) {
-  return new Intl.DateTimeFormat("en-US", {
+function formatNotificationDate(
+  date: string,
+  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string,
+) {
+  return formatDate(date, {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
     month: "short",
-  }).format(new Date(date));
+  });
 }

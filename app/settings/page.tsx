@@ -26,53 +26,56 @@ import type {
   NotificationPreferences,
 } from "@/lib/game";
 import { settingsService } from "@/lib/indexed-db";
+import type { AppLanguage } from "@/lib/i18n";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useGameSnapshot } from "@/hooks/use-game-snapshot";
 
 const weekDays = [
-  { label: "Sun", value: 0 },
-  { label: "Mon", value: 1 },
-  { label: "Tue", value: 2 },
-  { label: "Wed", value: 3 },
-  { label: "Thu", value: 4 },
-  { label: "Fri", value: 5 },
-  { label: "Sat", value: 6 },
+  { labelKey: "settings.weekday.sun", value: 0 },
+  { labelKey: "settings.weekday.mon", value: 1 },
+  { labelKey: "settings.weekday.tue", value: 2 },
+  { labelKey: "settings.weekday.wed", value: 3 },
+  { labelKey: "settings.weekday.thu", value: 4 },
+  { labelKey: "settings.weekday.fri", value: 5 },
+  { labelKey: "settings.weekday.sat", value: 6 },
 ];
 
 const notificationItems: Array<{
-  description: string;
+  descriptionKey: string;
   icon: ReactNode;
   key: NotificationPreferenceKey;
-  title: string;
+  titleKey: string;
 }> = [
   {
-    description: "A gentle local reminder to clear daily quests.",
+    descriptionKey: "settings.notification.dailyQuestReminder.body",
     icon: <BellRing className="size-5" />,
     key: "dailyQuestReminder",
-    title: "Daily quest reminder",
+    titleKey: "settings.notification.dailyQuestReminder.title",
   },
   {
-    description: "Warn before your current streak is at risk.",
+    descriptionKey: "settings.notification.streakProtection.body",
     icon: <Flame className="size-5" />,
     key: "streakProtection",
-    title: "Streak protection",
+    titleKey: "settings.notification.streakProtection.title",
   },
   {
-    description: "Surface boss quests that are close to their deadline.",
+    descriptionKey: "settings.notification.bossDeadlineWarning.body",
     icon: <Trophy className="size-5" />,
     key: "bossDeadlineWarning",
-    title: "Boss deadline warning",
+    titleKey: "settings.notification.bossDeadlineWarning.title",
   },
   {
-    description: "Include store purchases and redeemed rewards in reminders.",
+    descriptionKey: "settings.notification.rewardActivity.body",
     icon: <Sparkles className="size-5" />,
     key: "rewardActivity",
-    title: "Reward activity",
+    titleKey: "settings.notification.rewardActivity.title",
   },
 ];
 
 export default function SettingsPage() {
   const { error, isLoading, refresh, snapshot } = useGameSnapshot();
+  const { language, setLanguage, t } = useI18n();
   const [notice, setNotice] = useState<string | null>(null);
   const [resetText, setResetText] = useState("");
   const [isSavingOffDay, setIsSavingOffDay] = useState(false);
@@ -118,7 +121,7 @@ export default function SettingsPage() {
       setIsSavingOffDay(true);
       await gameService.updateWeeklyOffDay(day);
       await refresh();
-      setNotice(`${weekDays[day].label} is now your weekly off day.`);
+      setNotice(t("settings.offDaySaved", { day: t(weekDays[day].labelKey) }));
     } catch (caughtError) {
       setNotice(
         caughtError instanceof Error
@@ -145,7 +148,7 @@ export default function SettingsPage() {
         .slice(0, 10)}.json`;
       link.click();
       URL.revokeObjectURL(url);
-      setNotice("Local data export prepared.");
+      setNotice(t("settings.exportPrepared"));
     } catch (caughtError) {
       setNotice(
         caughtError instanceof Error
@@ -157,7 +160,7 @@ export default function SettingsPage() {
 
   async function resetData() {
     if (resetText !== "RESET") {
-      setNotice("Type RESET before resetting local game data.");
+      setNotice(t("settings.typeResetFirst"));
       return;
     }
 
@@ -167,7 +170,7 @@ export default function SettingsPage() {
       await refresh();
       setResetText("");
       setNotificationPreferences(normalizeNotificationPreferences());
-      setNotice("Local game data reset. Your Telegram profile was preserved.");
+      setNotice(t("settings.resetDone"));
     } catch (caughtError) {
       setNotice(
         caughtError instanceof Error
@@ -196,7 +199,7 @@ export default function SettingsPage() {
         NOTIFICATION_PREFERENCES_KEY,
         nextPreferences,
       );
-      setNotice("Notification preferences saved locally.");
+      setNotice(t("settings.notificationsSaved"));
     } catch (caughtError) {
       setNotificationPreferences(notificationPreferences);
       setNotice(
@@ -228,7 +231,7 @@ export default function SettingsPage() {
       <main className="mx-auto min-h-[calc(100svh-8rem)] w-full max-w-md space-y-4 px-3 py-4">
         <SettingsHeader />
         <section className="rounded-xl border border-rose-500/50 bg-rose-950/20 p-4 text-sm text-rose-100">
-          Could not load settings. {error?.message}
+          {t("settings.loadError", { message: error?.message ?? "" })}
         </section>
       </main>
     );
@@ -246,12 +249,51 @@ export default function SettingsPage() {
 
       <section className="space-y-3 rounded-2xl border border-slate-700/55 bg-[#07111f]/82 p-4 shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(99,148,216,0.06)] backdrop-blur-xl">
         <SectionTitle
-          icon={<CalendarDays className="size-5" />}
-          title="Weekly Off Day"
+          icon={<Sparkles className="size-5" />}
+          title={t("common.language")}
         />
         <p className="text-sm leading-relaxed text-slate-400">
-          Missing tasks on this day will not break streak or remove XP. Any
-          quest progress you do complete counts double.
+          {t("settings.languageBody")}
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {(["en", "fa"] satisfies AppLanguage[]).map((option) => {
+            const isActive = language === option;
+
+            return (
+              <Button
+                className={cn(
+                  "h-11 rounded-xl border text-sm font-semibold",
+                  isActive
+                    ? "border-[#2f8cff]/80 bg-[#0d4fe0] text-white shadow-[0_0_16px_rgba(47,140,255,0.45)] hover:bg-[#155df0]"
+                    : "border-slate-700/60 bg-[#030914]/70 text-slate-300 hover:bg-[#0b1728] hover:text-white",
+                )}
+                key={option}
+                onClick={() => {
+                  setLanguage(option).catch((caughtError) => {
+                    setNotice(
+                      caughtError instanceof Error
+                        ? caughtError.message
+                        : "Could not save language.",
+                    );
+                  });
+                }}
+                type="button"
+                variant={isActive ? "default" : "ghost"}
+              >
+                {t(option === "en" ? "language.english" : "language.persian")}
+              </Button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="space-y-3 rounded-2xl border border-slate-700/55 bg-[#07111f]/82 p-4 shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(99,148,216,0.06)] backdrop-blur-xl">
+        <SectionTitle
+          icon={<CalendarDays className="size-5" />}
+          title={t("settings.offDay")}
+        />
+        <p className="text-sm leading-relaxed text-slate-400">
+          {t("settings.offDayBody")}
         </p>
         <div className="grid grid-cols-7 gap-1.5">
           {weekDays.map((day) => {
@@ -271,7 +313,7 @@ export default function SettingsPage() {
                 type="button"
                 variant={isActive ? "default" : "ghost"}
               >
-                {day.label}
+                {t(day.labelKey)}
               </Button>
             );
           })}
@@ -279,24 +321,23 @@ export default function SettingsPage() {
       </section>
 
       <section className="grid grid-cols-3 gap-2">
-        <SummaryCard label="Tasks" value={snapshot.tasks.length} />
-        <SummaryCard label="Rewards" value={snapshot.rewards.length} />
-        <SummaryCard label="Events" value={snapshot.activityEvents.length} />
+        <SummaryCard label={t("common.tasks")} value={snapshot.tasks.length} />
+        <SummaryCard label={t("common.rewards")} value={snapshot.rewards.length} />
+        <SummaryCard label={t("common.events")} value={snapshot.activityEvents.length} />
       </section>
 
       <section className="space-y-3 rounded-2xl border border-slate-700/55 bg-[#07111f]/82 p-4 shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(99,148,216,0.06)] backdrop-blur-xl">
         <SectionTitle
           icon={<BellRing className="size-5" />}
-          title="Notification Preferences"
+          title={t("settings.notifications")}
         />
         <p className="text-sm leading-relaxed text-slate-400">
-          Stored locally for future Telegram reminders. These toggles do not ask
-          for browser notification permission.
+          {t("settings.notificationsBody")}
         </p>
         <div className="space-y-2">
           {notificationItems.map((item) => (
             <NotificationPreferenceRow
-              description={item.description}
+              description={t(item.descriptionKey)}
               icon={item.icon}
               isChecked={notificationPreferences[item.key]}
               isDisabled={
@@ -306,17 +347,16 @@ export default function SettingsPage() {
               onChange={(value) =>
                 updateNotificationPreference(item.key, value)
               }
-              title={item.title}
+              title={t(item.titleKey)}
             />
           ))}
         </div>
       </section>
 
       <section className="space-y-3 rounded-2xl border border-slate-700/55 bg-[#07111f]/82 p-4 shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(99,148,216,0.06)] backdrop-blur-xl">
-        <SectionTitle icon={<Database className="size-5" />} title="Local Data" />
+        <SectionTitle icon={<Database className="size-5" />} title={t("settings.localData")} />
         <p className="text-sm leading-relaxed text-slate-400">
-          This mini app stores progress on this device in IndexedDB. Export
-          before changing phones or clearing browser data.
+          {t("settings.localDataBody")}
         </p>
         <Button
           className="h-11 w-full rounded-xl border border-[#2f8cff]/70 bg-blue-950/35 text-white hover:bg-blue-950/55"
@@ -325,23 +365,22 @@ export default function SettingsPage() {
           variant="ghost"
         >
           <Download className="size-5" />
-          Export JSON
+          {t("action.exportJson")}
         </Button>
       </section>
 
       <section className="space-y-3 rounded-2xl border border-rose-500/40 bg-rose-950/15 p-4 shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(244,63,94,0.06)] backdrop-blur-xl">
         <SectionTitle
           icon={<ShieldCheck className="size-5" />}
-          title="Reset Progress"
+          title={t("settings.resetProgress")}
         />
         <p className="text-sm leading-relaxed text-rose-100/75">
-          This clears quests, completions, rewards, wallet history, achievements,
-          and activity. Your Telegram profile stays linked.
+          {t("settings.resetBody")}
         </p>
         <input
           className="h-11 w-full rounded-xl border border-rose-500/35 bg-[#030914]/80 px-3 text-base text-white outline-none transition placeholder:text-rose-200/35 focus:border-rose-400/80 focus:ring-2 focus:ring-rose-500/20"
           onChange={(event) => setResetText(event.target.value)}
-          placeholder="Type RESET"
+          placeholder={t("settings.typeReset")}
           value={resetText}
         />
         <Button
@@ -352,7 +391,7 @@ export default function SettingsPage() {
           variant="ghost"
         >
           <RotateCcw className="size-5" />
-          {isResetting ? "Resetting..." : "Reset Local Game Data"}
+          {isResetting ? t("action.resetting") : t("action.resetLocalGameData")}
         </Button>
       </section>
     </main>
@@ -360,6 +399,8 @@ export default function SettingsPage() {
 }
 
 function SettingsHeader() {
+  const { t } = useI18n();
+
   return (
     <header className="flex items-center gap-3 pt-2">
       <Button
@@ -368,14 +409,14 @@ function SettingsHeader() {
         size="icon"
         variant="ghost"
       >
-        <Link aria-label="Back home" href="/">
+        <Link aria-label={t("action.backHome")} href="/">
           <ArrowLeft className="size-5" />
         </Link>
       </Button>
       <div>
-        <p className="text-sm font-medium text-[#3d87ff]">App Control</p>
+        <p className="text-sm font-medium text-[#3d87ff]">{t("settings.appControl")}</p>
         <h1 className="text-3xl font-semibold leading-none tracking-[-0.03em] text-white">
-          Settings
+          {t("common.settings")}
         </h1>
       </div>
     </header>

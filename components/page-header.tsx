@@ -13,12 +13,14 @@ export default function PageHeader({
   activeTab,
   actions = [],
   onTabChange,
+  tabLabelMap,
   tabs,
   title,
 }: {
   activeTab?: string;
   actions?: PageHeaderAction[];
   onTabChange?: (tab: string) => void;
+  tabLabelMap?: Partial<Record<string, string>>;
   tabs: readonly string[];
   title: string;
 }) {
@@ -65,7 +67,7 @@ export default function PageHeader({
                 type="button"
                 variant={isActive ? "default" : "ghost"}
               >
-                {tab}
+                {tabLabelMap?.[tab] ?? tab}
               </Button>
             );
           })}

@@ -3,6 +3,7 @@
 import { useRawInitData } from "@telegram-apps/sdk-react";
 import { useEffect } from "react";
 import BottomNavigation from "@/components/bottom-navigation";
+import { I18nProvider } from "@/lib/i18n";
 import { gameService } from "@/lib/game";
 
 type TelegramInitUser = {
@@ -70,9 +71,11 @@ export default function AppProvider({
   }, [rawInitData]);
 
   return (
-    <div className="min-h-svh bg-background pb-28 text-foreground">
-      {children}
-      <BottomNavigation />
-    </div>
+    <I18nProvider>
+      <div className="min-h-svh bg-background pb-28 text-foreground">
+        {children}
+        <BottomNavigation />
+      </div>
+    </I18nProvider>
   );
 }

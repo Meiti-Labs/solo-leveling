@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ActivityEvent } from "@/lib/indexed-db/types";
+import { translateGameText, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useGameSnapshot } from "@/hooks/use-game-snapshot";
 
@@ -52,11 +53,9 @@ const toneStyles: Record<
   },
 };
 
-const formatNumber = (value: number) =>
-  new Intl.NumberFormat("en-US").format(Math.abs(value));
-
 export default function ActivityPage() {
   const { error, isLoading, snapshot } = useGameSnapshot();
+  const { formatDate, formatNumber, language, t } = useI18n();
 
   if (isLoading) {
     return (
@@ -88,20 +87,26 @@ export default function ActivityPage() {
       <Header />
 
       <section className="grid grid-cols-3 gap-2">
-        <SummaryCard label="Events" value={snapshot.activityEvents.length} />
-        <SummaryCard label="Tasks" value={snapshot.taskCompletions.length} />
-        <SummaryCard label="Rewards" value={snapshot.rewardPurchases.length} />
+        <SummaryCard label={t("common.events")} value={snapshot.activityEvents.length} />
+        <SummaryCard label={t("common.tasks")} value={snapshot.taskCompletions.length} />
+        <SummaryCard label={t("common.rewards")} value={snapshot.rewardPurchases.length} />
       </section>
 
       <section className="space-y-2">
         {snapshot.activityEvents.length === 0 ? (
           <p className="rounded-xl border border-slate-700/55 bg-[#07111f]/82 p-4 text-sm text-slate-300">
-            Nothing recorded yet. Complete quests, unlock achievements, or buy a
-            reward to start the timeline.
+            {t("activity.emptyTimeline")}
           </p>
         ) : (
           snapshot.activityEvents.map((activity) => (
-            <ActivityRow activity={activity} key={activity.id} />
+            <ActivityRow
+              activity={activity}
+              formatDate={formatDate}
+              formatNumber={formatNumber}
+              key={activity.id}
+              language={language}
+              t={t}
+            />
           ))
         )}
       </section>
@@ -110,6 +115,8 @@ export default function ActivityPage() {
 }
 
 function Header() {
+  const { t } = useI18n();
+
   return (
     <header className="flex items-center gap-3 pt-2">
       <Button
@@ -118,14 +125,14 @@ function Header() {
         size="icon"
         variant="ghost"
       >
-        <Link aria-label="Back home" href="/">
+        <Link aria-label={t("action.backHome")} href="/">
           <ArrowLeft className="size-5" />
         </Link>
       </Button>
       <div>
-        <p className="text-sm font-medium text-[#3d87ff]">Timeline</p>
+        <p className="text-sm font-medium text-[#3d87ff]">{t("common.timeline")}</p>
         <h1 className="text-3xl font-semibold leading-none tracking-[-0.03em] text-white">
-          Activity
+          {t("activity.title")}
         </h1>
       </div>
     </header>
@@ -143,11 +150,23 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
   );
 }
 
-function ActivityRow({ activity }: { activity: ActivityEvent }) {
+function ActivityRow({
+  activity,
+  formatDate,
+  formatNumber,
+  language,
+  t,
+}: {
+  activity: ActivityEvent;
+  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string;
+  formatNumber: (value: number) => string;
+  language: "en" | "fa";
+  t: (key: string) => string;
+}) {
   const visual = getActivityVisual(activity);
   const Icon = visual.icon;
   const styles = toneStyles[visual.tone];
-  const delta = formatActivityDelta(activity);
+  const delta = formatActivityDelta(activity, formatNumber, t);
 
   return (
     <article className="grid grid-cols-[3.25rem_minmax(0,1fr)] gap-3 rounded-xl border border-slate-700/55 bg-[#07111f]/82 p-3 shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(99,148,216,0.06)] backdrop-blur-xl">
@@ -168,14 +187,15 @@ function ActivityRow({ activity }: { activity: ActivityEvent }) {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="truncate text-base font-medium leading-tight text-white">
-              {activity.title}
+              {translateGameText(activity.title, language)}
             </h2>
             <p className="truncate text-sm text-slate-400">
-              {activity.description ?? "Progress updated"}
+              {translateGameText(activity.description, language) ??
+                t("activity.progressUpdated")}
             </p>
           </div>
           <p className="shrink-0 text-xs text-slate-500">
-            {formatDate(activity.occurredAt)}
+            {formatActivityDate(activity.occurredAt, formatDate, t)}
           </p>
         </div>
 
@@ -235,36 +255,48 @@ function getActivityVisual(activity: ActivityEvent): {
   return { icon: Coins, tone: "gold" };
 }
 
-function formatActivityDelta(activity: ActivityEvent) {
+function formatActivityDelta(
+  activity: ActivityEvent,
+  formatNumber: (value: number) => string,
+  t: (key: string) => string,
+) {
   const deltas = [
-    createDelta(activity.xpDelta, "XP"),
-    createDelta(activity.coinDelta, "coins"),
-    createDelta(activity.gemDelta, "gems"),
+    createDelta(activity.xpDelta, "XP", formatNumber),
+    createDelta(activity.coinDelta, t("common.coins"), formatNumber),
+    createDelta(activity.gemDelta, t("common.gems"), formatNumber),
   ].filter(Boolean) as Array<{ isNegative: boolean; label: string }>;
 
   return deltas.length ? deltas : null;
 }
 
-function createDelta(value: number | undefined, label: string) {
+function createDelta(
+  value: number | undefined,
+  label: string,
+  formatNumber: (value: number) => string,
+) {
   if (!value) {
     return null;
   }
 
   return {
     isNegative: value < 0,
-    label: `${value > 0 ? "+" : "-"}${formatNumber(value)} ${label}`,
+    label: `${value > 0 ? "+" : "-"}${formatNumber(Math.abs(value))} ${label}`,
   };
 }
 
-function formatDate(isoDate: string) {
+function formatActivityDate(
+  isoDate: string,
+  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => string,
+  t: (key: string) => string,
+) {
   const date = new Date(isoDate);
 
   if (Number.isNaN(date.getTime())) {
-    return "Recently";
+    return t("period.recently");
   }
 
-  return new Intl.DateTimeFormat("en-US", {
+  return formatDate(date, {
     day: "numeric",
     month: "short",
-  }).format(date);
+  });
 }

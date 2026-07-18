@@ -4,6 +4,7 @@ import { BadgeDollarSign, ClipboardList, Flame, Sparkles } from "lucide-react";
 import type { ComponentType } from "react";
 import type { GameSnapshot } from "@/hooks/use-game-snapshot";
 import { isOffDay, toAppDate } from "@/lib/game/date";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type OverviewStat = {
@@ -44,14 +45,12 @@ const toneStyles: Record<
   },
 };
 
-const formatNumber = (value: number) =>
-  new Intl.NumberFormat("en-US").format(value);
-
 export default function TodayOverviewSection({
   snapshot,
 }: {
   snapshot: GameSnapshot;
 }) {
+  const { formatNumber, t } = useI18n();
   const today = toAppDate();
   const todaysCompletions = snapshot.taskCompletions.filter(
     (completion) => completion.completedForDate === today,
@@ -68,30 +67,35 @@ export default function TodayOverviewSection({
   const offDay = isOffDay(today, snapshot.progress.weeklyOffDay);
   const overviewStats: OverviewStat[] = [
     {
-      label: "Today's XP",
+      label: t("home.todayXp"),
       value: formatNumber(todaysXp),
-      helper: offDay ? "2x off day" : `${completedDailyTasks}/${activeDailyTasks.length} daily`,
+      helper: offDay
+        ? t("home.twoXOffDay")
+        : t("home.dailyCount", {
+            done: completedDailyTasks,
+            total: activeDailyTasks.length,
+          }),
       tone: "blue",
       icon: Sparkles,
     },
     {
-      label: "Current Streak",
+      label: t("home.currentStreak"),
       value: formatNumber(snapshot.progress.currentStreak),
-      helper: "days",
+      helper: t("home.days"),
       tone: "amber",
       icon: Flame,
     },
     {
-      label: "Active Quests",
+      label: t("home.activeQuests"),
       value: formatNumber(activeTasks.length),
-      helper: "ongoing",
+      helper: t("home.ongoing"),
       tone: "purple",
       icon: ClipboardList,
     },
     {
-      label: "Coins",
+      label: t("home.coins"),
       value: formatNumber(snapshot.progress.coins),
-      helper: `${formatNumber(snapshot.progress.gems)} gems`,
+      helper: `${formatNumber(snapshot.progress.gems)} ${t("common.gems")}`,
       tone: "gold",
       icon: BadgeDollarSign,
     },
@@ -99,7 +103,7 @@ export default function TodayOverviewSection({
 
   return (
     <section className="space-y-3">
-      <h2 className="px-1 text-lg font-medium text-white">Today&apos;s Overview</h2>
+      <h2 className="px-1 text-lg font-medium text-white">{t("home.todayOverview")}</h2>
 
       <div className="grid grid-cols-2 overflow-hidden rounded-2xl border border-slate-700/55 bg-[#07111f]/82 shadow-[0_10px_28px_rgba(0,0,0,0.28),inset_0_1px_18px_rgba(99,148,216,0.06)] backdrop-blur-xl min-[430px]:grid-cols-4">
         {overviewStats.map((stat, index) => (
